@@ -50,6 +50,9 @@
   body.has-bg::before {
     background: rgba(0, 0, 0, 0.45);
   }
+  body.hydration-playing::before {
+    background: transparent !important;
+  }
 
   .app {
     background: var(--card-bg);
@@ -2206,12 +2209,14 @@ function stopHydrationVideo() {
   hydrationVideo.pause();
   hydrationVideo.classList.remove('show');
   hydrationOverlay.classList.remove('show');
+  document.body.classList.remove('hydration-playing');
 }
 
 // 视频播完自动隐藏
 hydrationVideo.addEventListener('ended', () => {
   hydrationVideo.classList.remove('show');
   hydrationOverlay.classList.remove('show');
+  document.body.classList.remove('hydration-playing');
 });
 
 // 解锁音频（浏览器要求用户交互后才允许有声播放）
@@ -2249,6 +2254,7 @@ function triggerHydration() {
   // ── 播放视频（如果有设置）──
   const src = getVideoSrc();
   if (src) {
+    document.body.classList.add('hydration-playing');
     hydrationVideo.src = src;
     hydrationVideo.classList.add('show');
     hydrationOverlay.classList.add('show');
