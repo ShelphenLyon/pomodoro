@@ -1276,29 +1276,29 @@
 <!-- 设置面板 -->
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel">
-    <h3>⚙️ 设置</h3>
+    <h3>设置</h3>
     <div class="setting-row">
-      <label>🍅 工作时长</label>
+      <label>工作时长</label>
       <input type="range" id="rangeWork" min="5" max="60" value="25" step="1">
       <span class="val" id="valWork">25 分钟</span>
     </div>
     <div class="setting-row">
-      <label>☕ 短休时长</label>
+      <label>短休时长</label>
       <input type="range" id="rangeShort" min="1" max="30" value="5" step="1">
       <span class="val" id="valShort">5 分钟</span>
     </div>
     <div class="setting-row">
-      <label>🌴 长休时长</label>
+      <label>长休时长</label>
       <input type="range" id="rangeLong" min="5" max="45" value="15" step="1">
       <span class="val" id="valLong">15 分钟</span>
     </div>
     <div class="setting-row">
-      <label>🔔 提示音量</label>
+      <label>提示音量</label>
       <input type="range" id="rangeVolume" min="0" max="100" value="60" step="5">
       <span class="val" id="valVolume">60%</span>
     </div>
     <div class="setting-row" style="margin-bottom:8px">
-      <label>🎨 主题色调</label>
+      <label>主题色调</label>
     </div>
     <div class="theme-options" id="themeOptions">
       <span class="theme-dot active" data-theme="red" style="background:#16213e;border:2px solid #e74c3c" title="经典暗夜"></span>
@@ -1310,13 +1310,13 @@
     </div>
     <div class="settings-divider"></div>
     <div class="setting-row" style="margin-bottom:10px">
-      <label>🖼️ 背景图片</label>
+      <label>背景图片</label>
     </div>
     <div class="bg-options">
       <input type="file" id="bgFileInput" accept="image/*" style="display:none">
-      <button class="btn-bg-option" id="btnBgFile">📁 本地图片</button>
-      <button class="btn-bg-option" id="btnBgUrl">🔗 图片链接</button>
-      <button class="btn-bg-option btn-bg-remove" id="btnBgRemove">✕ 移除</button>
+      <button class="btn-bg-option" id="btnBgFile">本地图片</button>
+      <button class="btn-bg-option" id="btnBgUrl">图片链接</button>
+      <button class="btn-bg-option btn-bg-remove" id="btnBgRemove">移除</button>
     </div>
     <div class="bg-url-row" id="bgUrlRow" style="display:none">
       <input type="text" id="bgUrlInput" placeholder="粘贴图片 URL...">
@@ -1324,20 +1324,20 @@
     </div>
     <div class="settings-divider"></div>
     <div class="setting-row">
-      <label>💧 补水提醒</label>
+      <label>补水提醒</label>
       <label class="toggle-switch" style="width:44px;height:24px;position:relative;display:inline-block;">
         <input type="checkbox" id="toggleHydration">
         <span class="toggle-slider"></span>
       </label>
     </div>
     <div class="setting-row">
-      <label>⏱ 提醒间隔</label>
+      <label>提醒间隔</label>
       <input type="range" id="rangeHydration" min="1" max="120" value="60" step="1">
       <span class="val" id="valHydration">60 分钟</span>
     </div>
     <div class="bg-options" style="margin-bottom:8px">
       <input type="file" id="hydrationFileInput" accept="video/*" style="display:none">
-      <button class="btn-bg-option" id="btnHydrationFile">📁 选择视频</button>
+      <button class="btn-bg-option" id="btnHydrationFile">选择视频</button>
       <span id="hydrationFileName" style="font-size:11px;color:var(--text-secondary);align-self:center;">未选择视频</span>
     </div>
     <button class="btn-close-settings" id="btnCloseSettings">完成</button>
