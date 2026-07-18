@@ -131,9 +131,15 @@
   .countup-row .countup-label {
     font-weight: 600;
     letter-spacing: 0.5px;
+    padding: 4px 12px;
+    border-radius: 14px;
+    transition: all 0.3s;
   }
   .countup-row .countup-label.active {
-    color: var(--accent-up);
+    color: #fff;
+    background: var(--accent-up);
+    font-size: 14px;
+    box-shadow: 0 2px 12px rgba(243, 156, 18, 0.35);
   }
 
   /* ── 计时器圆环 ── */
@@ -1853,16 +1859,17 @@ function timerComplete() {
   sendNotification('🍅 番茄钟', `「${modeLabel}」时间到！`);
 
   if (state.mode === 'work') {
-    // 完成一个番茄
-    state.pomodoros++;
-    stats.today++;
-    stats.total++;
-    recordSession(state.total); // 记录本次会话
-    saveData();
-    renderTodo(); // 刷新抽屉（自动打勾）
+    if (state.total >= 180) {
+      // 达到 3 分钟才记录
+      state.pomodoros++;
+      stats.today++;
+      stats.total++;
+      recordSession(state.total);
+      saveData();
+      renderTodo();
+    }
 
     if (state.pomodoros >= 4) {
-      // 每 4 个番茄 → 长休息 → 自动开始
       showToast('🎉 完成 4 个番茄！来次长休息吧～');
       state.pomodoros = 0;
       resetTimerForMode('long');
@@ -1900,23 +1907,30 @@ function stopCountUp() {
   sendNotification('🍅 番茄钟', `正向计时完成！用时 ${elapsedStr}`);
 
   if (state.mode === 'work') {
-    state.pomodoros++;
-    stats.today++;
-    stats.total++;
-    recordSession(elapsed); // 记录本次会话
-    saveData();
-    renderTodo(); // 刷新抽屉（自动打勾）
-    showToast(`✅ 完成！用时 ${elapsedStr}`);
+    if (elapsed >= 180) {
+      state.pomodoros++;
+      stats.today++;
+      stats.total++;
+      recordSession(elapsed);
+      saveData();
+      renderTodo();
+      showToast(`✅ 完成！用时 ${elapsedStr}`);
 
-    // 暂时关闭 countUp 进入休息（休息用倒计时）
-    state.countUp = false;
-    if (state.pomodoros >= 4) {
-      state.pomodoros = 0;
-      resetTimerForMode('long');
+      // 进入休息（休息用倒计时）
+      state.countUp = false;
+      if (state.pomodoros >= 4) {
+        state.pomodoros = 0;
+        resetTimerForMode('long');
+      } else {
+        resetTimerForMode('short');
+      }
+      startTimer();
     } else {
-      resetTimerForMode('short');
+      showToast(`⚠️ 不足 3 分钟，未记录`);
+      // 不跳休息，回到专注模式
+      state.countUp = settings.countUp;
+      resetTimerForMode('work');
     }
-    startTimer();
   } else {
     showToast(`✅ 休息结束！用时 ${elapsedStr}`);
     // 回到工作模式，恢复 countUp 偏好
@@ -1981,7 +1995,7 @@ function resetTimer() {
 // 模式切换 (手动)
 // ═══════════════════════════════════════════
 function switchMode(mode) {
-  if (state.mode === mode && state.status !== 'idle') return; // 同一个模式且在运行中则不切换
+  if (state.status !== 'idle') return; // 运行或暂停时不允许切换模式
   clearInterval(timerInterval);
   timerInterval = null;
   timerEndTime = null;
@@ -2029,7 +2043,13 @@ settingsOverlay.addEventListener('click', (e) => {
 
 // 正向计时开关
 toggleCountUp.addEventListener('change', () => {
-  const wasRunning = state.status === 'running';
+  // 计时非空闲时不允许切换
+  if (state.status !== 'idle') {
+    toggleCountUp.checked = state.countUp;
+    showToast('⚠️ 计时中无法切换模式');
+    return;
+  }
+
   clearInterval(timerInterval);
   timerInterval = null;
   timerEndTime = null;
