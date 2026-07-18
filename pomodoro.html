@@ -3083,6 +3083,8 @@ function buildDonutEntries(refDate) {
 
   // 补充不在 todoList 中但有 session 记录的任务
   const usedNames = new Set(entries.map(e => e.name));
+  // 子任务名也排除，避免重复出现在扇形图中
+  entries.forEach(e => e.children.forEach(c => usedNames.add(c.name)));
   const sessions = stats.sessionHistory.filter(s => s.date === refDate);
   const extraMap = {};
   sessions.forEach(s => {
