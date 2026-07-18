@@ -2496,7 +2496,7 @@ function hideAddRow() {
 
 function selectTodoItem(id) {
   const item = stats.todoList.find(t => t.id === id);
-  if (!item || item.done) return;
+  if (!item) return;
   taskInput.value = item.text;
   try { localStorage.setItem('pomodoro_task', taskInput.value); } catch(e) {}
   // 自动切换到专注模式
