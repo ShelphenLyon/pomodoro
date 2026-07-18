@@ -2557,7 +2557,7 @@ function addTimeToTodoTask(taskName, duration) {
   if (!taskName || taskName === '未命名任务') return;
   const today = new Date().toISOString().slice(0, 10);
   const item = stats.todoList.find(t =>
-    t.date === today && t.text === taskName && !t.done
+    t.date === today && t.text === taskName
   );
   if (item) {
     item.totalSeconds = (item.totalSeconds || 0) + duration;
