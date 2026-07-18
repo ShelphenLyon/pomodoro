@@ -653,6 +653,56 @@
   }
   .donut-back:hover { border-color: var(--accent-up); color: #fff; }
 
+  /* 悬浮外环 */
+  .donut-group { cursor: pointer; }
+  .donut-outer-ring {
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .donut-group:hover .donut-outer-ring {
+    opacity: 0.7;
+  }
+
+  /* 每小时柱形图 */
+  .hourly-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 72px;
+    padding: 4px 0;
+    overflow-x: auto;
+  }
+  .hourly-chart::-webkit-scrollbar { height: 2px; }
+  .hourly-chart::-webkit-scrollbar-thumb { background: #333; border-radius: 1px; }
+  .hourly-bar-col {
+    flex: 1;
+    min-width: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .hourly-bar {
+    width: 100%;
+    background: var(--accent-up);
+    border-radius: 3px 3px 0 0;
+    transition: height 0.4s;
+    opacity: 0.8;
+    min-height: 0;
+  }
+  .hourly-bar-label {
+    font-size: 9px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+  .hourly-bar-time {
+    font-size: 8px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+  }
+
   /* 图表导航 */
   .chart-nav {
     display: flex; align-items: center; justify-content: center;
@@ -1266,7 +1316,7 @@
 <!-- 统计面板 -->
 <div class="stats-overlay" id="statsOverlay">
   <div class="stats-panel" id="statsPanel">
-    <h3>📊 统计数据</h3>
+    <h3>统计数据</h3>
     <div id="statsContent"></div>
     <button class="stats-close" id="btnCloseStats">关闭</button>
     <button class="stats-clear" id="btnClearStats">清除所有记录</button>
@@ -2831,13 +2881,8 @@ function renderStats() {
   const allTotalSec = stats.sessionHistory.reduce((sum, s) => sum + s.duration, 0);
   const allCount = stats.sessionHistory.length;
 
-  // 选中日期的任务分布
-  const taskMap = {};
-  selSessions.forEach(s => {
-    const key = s.task || '未命名';
-    taskMap[key] = (taskMap[key] || 0) + s.duration;
-  });
-  const taskEntries = Object.entries(taskMap).sort((a, b) => b[1] - a[1]);
+  // 选中日期的母任务分布（子任务时间已归入母任务）
+  const donutEntries = buildDonutEntries(selDate);
 
   // 可用日期
   const availDates = getAvailableDates();
@@ -2852,11 +2897,11 @@ function renderStats() {
 
   // ── 日期选择器 ──
   html += `<div class="date-chips">`;
-  const showDates = availDates.slice(0, 14); // 最多显示 14 天
+  const showDates = availDates.slice(0, 14);
   showDates.forEach(d => {
     const isSel = d === selDate;
     const isToday = d === today;
-    const label = isToday ? '今天' : d.slice(5); // MM-DD
+    const label = isToday ? '今天' : d.slice(5);
     html += `<button class="date-chip${isSel ? ' active' : ''}" data-date="${d}">${label}</button>`;
   });
   html += `</div>`;
@@ -2864,7 +2909,7 @@ function renderStats() {
   // ── 当日概览 ──
   const dateLabel = selDate === today ? '今日总览' : `${selDate} 总览`;
   html += `<div class="stats-section">
-    <h4>📅 ${dateLabel}</h4>
+    <h4>${dateLabel}</h4>
     <div class="overview-cards">
       <div class="overview-card">
         <span class="val-big">${formatDurationShort(selTotalSec)}</span>
@@ -2875,15 +2920,36 @@ function renderStats() {
         <span class="val-label">完成番茄</span>
       </div>
       <div class="overview-card">
-        <span class="val-big">${Object.keys(taskMap).length}</span>
+        <span class="val-big">${donutEntries.length}</span>
         <span class="val-label">任务数</span>
       </div>
     </div>
   </div>`;
 
+  // ── 每小时学习量 ──
+  const hourlyData = [];
+  for (let h = 0; h < 24; h++) {
+    const totalSec = selSessions
+      .filter(s => new Date(s.timestamp).getHours() === h)
+      .reduce((sum, s) => sum + s.duration, 0);
+    hourlyData.push({ hour: h, totalSec });
+  }
+  const maxHourly = Math.max(...hourlyData.map(d => d.totalSec), 1);
+  html += `<div class="stats-section"><h4>每小时学习量</h4>
+    <div class="hourly-chart">`;
+  hourlyData.forEach(d => {
+    const h = maxHourly > 0 ? Math.max(Math.round((d.totalSec / maxHourly) * 60), d.totalSec > 0 ? 2 : 0) : 0;
+    html += `<div class="hourly-bar-col" title="${d.hour}:00 - ${formatDurationShort(d.totalSec)}">
+      <span class="hourly-bar-time">${d.totalSec > 0 ? formatDurationShort(d.totalSec) : ''}</span>
+      <div class="hourly-bar" style="height:${h}%"></div>
+      <span class="hourly-bar-label">${d.hour}时</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
   // ── 当日任务分布（环形图）──
-  html += `<div class="stats-section"><h4>📋 ${selDate === today ? '今日' : selDate} 任务分布</h4>`;
-  if (taskEntries.length === 0) {
+  html += `<div class="stats-section"><h4>${selDate === today ? '今日' : selDate} 任务分布</h4>`;
+  if (donutEntries.length === 0) {
     html += `<div class="stats-empty">${selDate === today ? '今天' : '该日期'}还没有记录</div>`;
   } else {
     html += `<div id="donutContainer"></div>`;
@@ -2915,7 +2981,7 @@ function renderStats() {
   html += `</div></div>`;
 
   // ── 累计 ──
-  html += `<div class="stats-section"><h4>🏆 累计统计</h4>
+  html += `<div class="stats-section"><h4>累计统计</h4>
     <div class="overview-cards" style="grid-template-columns: repeat(2, 1fr);">
       <div class="overview-card">
         <span class="val-big">${formatDurationShort(allTotalSec)}</span>
@@ -2934,7 +3000,6 @@ function renderStats() {
   statsContent.querySelectorAll('.date-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       statsDate = chip.dataset.date;
-      pieDrillParent = null;
       renderStats();
     });
   });
@@ -2945,7 +3010,6 @@ function renderStats() {
     weekChart.querySelectorAll('.week-bar-col').forEach(col => {
       col.addEventListener('click', () => {
         statsDate = col.dataset.date;
-        pieDrillParent = null;
         if (chartMode === 'year') {
           // 年模式：点击月份 → 切换到该月的月视图
           chartMode = 'month';
@@ -2974,8 +3038,8 @@ function renderStats() {
   });
 
   // 渲染环形图
-  if (taskEntries.length > 0) {
-    renderDonutChart(taskEntries, selDate);
+  if (donutEntries.length > 0) {
+    renderDonutChart(donutEntries, selDate);
   }
 
   // 更新统计按钮状态
@@ -2990,76 +3054,116 @@ function renderStats() {
 // 环形图渲染
 // ═══════════════════════════════════════════
 const DONUT_COLORS = ['#e74c3c','#f39c12','#3498db','#2ecc71','#9b59b6','#1abc9c','#e67e22','#e91e63'];
-const DONUT_CX = 100, DONUT_CY = 100, DONUT_R = 85, DONUT_INNER = 50;
-let pieDrillParent = null; // 当前钻取的母任务名
+const DONUT_CX = 100, DONUT_CY = 100, DONUT_R = 80, DONUT_INNER = 48;
+const OUTER_R = 98, OUTER_INNER = 87;
 let statsDate = null;       // 统计面板选中的日期（null = 今天）
 let chartMode = 'week';     // 'week' | 'month' | 'year'
 let chartOffset = 0;        // 偏移量（0=当前, -1=上一, 1=下一）
 
-function renderDonutChart(taskEntries, selDate) {
+// 从 todoList 构建母任务列表（子任务时间已累积到母任务）
+function buildDonutEntries(refDate) {
+  const items = stats.todoList.filter(t => t.date === refDate);
+  const parents = items.filter(t => !t.parentId);
+  const children = items.filter(t => t.parentId);
+  const COLORS = DONUT_COLORS;
+
+  const entries = [];
+  parents.forEach((p, i) => {
+    const subs = children.filter(c => c.parentId === p.id && (c.totalSeconds || 0) > 0);
+    const total = p.totalSeconds || 0;
+    if (total > 0 || subs.length > 0) {
+      entries.push({
+        name: p.text,
+        totalSeconds: total,
+        children: subs.map(c => ({ name: c.text, totalSeconds: c.totalSeconds || 0 })),
+        color: COLORS[i % COLORS.length],
+      });
+    }
+  });
+
+  // 补充不在 todoList 中但有 session 记录的任务
+  const usedNames = new Set(entries.map(e => e.name));
+  const sessions = stats.sessionHistory.filter(s => s.date === refDate);
+  const extraMap = {};
+  sessions.forEach(s => {
+    const key = s.task || '未命名';
+    if (!usedNames.has(key)) {
+      extraMap[key] = (extraMap[key] || 0) + s.duration;
+    }
+  });
+  Object.entries(extraMap).forEach(([name, sec], i) => {
+    if (sec > 0) {
+      entries.push({
+        name,
+        totalSeconds: sec,
+        children: [],
+        color: COLORS[(parents.length + i) % COLORS.length],
+      });
+    }
+  });
+
+  return entries.sort((a, b) => b.totalSeconds - a.totalSeconds);
+}
+
+function renderDonutChart(entries, selDate) {
   const container = document.getElementById('donutContainer');
   if (!container) return;
 
   const today = new Date().toISOString().slice(0, 10);
   const refDate = selDate || today;
-  const COLORS = DONUT_COLORS;
+  const title = refDate === today ? '任务分布' : refDate;
 
-  // 确定当前显示的数据
-  let entries, title;
-  if (pieDrillParent) {
-    // 钻取模式：显示母任务的子任务
-    const parentTask = stats.todoList.find(t => t.date === refDate && t.text === pieDrillParent && !t.parentId);
-    if (!parentTask) { pieDrillParent = null; renderDonutChart(taskEntries, refDate); return; }
-    const children = stats.todoList.filter(t => t.date === refDate && t.parentId === parentTask.id);
-    entries = children.map(c => [c.text, c.totalSeconds || 0]);
-    title = '└ ' + pieDrillParent;
-    entries = entries.filter(([,s]) => s > 0);
-    if (entries.length === 0) {
-      container.innerHTML = '<div class="stats-empty">该任务暂无子任务数据</div>';
-      return;
-    }
-  } else {
-    entries = taskEntries;
-    title = refDate === today ? '全部任务' : refDate;
-  }
-
-  const total = entries.reduce((s, [,v]) => s + v, 0);
+  const total = entries.reduce((s, e) => s + e.totalSeconds, 0);
   if (total === 0) {
     container.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
-  // 生成 SVG 路径
+  // 生成主环切片 + 外环子任务
   let currentAngle = -Math.PI / 2;
-  const slices = entries.map(([name, val], i) => {
-    const sliceAngle = (val / total) * 2 * Math.PI;
+  const slices = entries.map((e) => {
+    const sliceAngle = (e.totalSeconds / total) * 2 * Math.PI;
     const startAngle = currentAngle;
     const endAngle = currentAngle + sliceAngle;
     currentAngle = endAngle;
+
+    // 子任务外环
+    let outerPaths = '';
+    if (e.children && e.children.length > 0) {
+      const childTotal = e.children.reduce((s, c) => s + c.totalSeconds, 0);
+      if (childTotal > 0) {
+        let ca = startAngle;
+        const childColors = ['#e67e22','#1abc9c','#e91e63','#f39c12','#9b59b6','#2ecc71','#3498db','#e74c3c'];
+        outerPaths = e.children.map((c, ci) => {
+          const cAngle = (c.totalSeconds / e.totalSeconds) * sliceAngle;
+          const cs = ca;
+          const ce = ca + cAngle;
+          ca = ce;
+          return `<path class="donut-outer-ring" d="${donutPath(DONUT_CX, DONUT_CY, OUTER_R, OUTER_INNER, cs, ce)}" fill="${childColors[ci % childColors.length]}"><title>${escapeHtml(c.name)}: ${formatDuration(c.totalSeconds)}</title></path>`;
+        }).join('');
+      }
+    }
+
     const path = donutPath(DONUT_CX, DONUT_CY, DONUT_R, DONUT_INNER, startAngle, endAngle);
-    const midAngle = startAngle + sliceAngle / 2;
-    return { name, val, path, midAngle, color: COLORS[i % COLORS.length], startAngle, endAngle };
+    return { name: e.name, val: e.totalSeconds, path, color: e.color, startAngle, endAngle, outerPaths };
   });
 
-  let html = '';
-  if (pieDrillParent) {
-    html += `<button class="donut-back" id="donutBackBtn">← 返回全部</button>`;
-  }
-
-  html += `<div class="donut-wrap">
+  const html = `<div class="donut-wrap">
     <svg class="donut-svg" viewBox="0 0 200 200">
       ${slices.map((s, i) => `
-        <path class="donut-slice" d="${s.path}" fill="${s.color}" data-index="${i}"
-              style="transform-origin:${DONUT_CX}px ${DONUT_CY}px">
-          <title>${escapeHtml(s.name)}: ${formatDuration(s.val)}</title>
-        </path>
+        <g class="donut-group">
+          <path class="donut-slice" d="${s.path}" fill="${s.color}">
+            <title>${escapeHtml(s.name)}: ${formatDuration(s.val)}</title>
+          </path>
+          ${s.outerPaths}
+        </g>
       `).join('')}
       <text class="donut-center-text" x="${DONUT_CX}" y="${DONUT_CY - 4}">${escapeHtml(title)}</text>
       <text class="donut-center-val" x="${DONUT_CX}" y="${DONUT_CY + 18}">${formatDurationShort(total)}</text>
     </svg>
     <div class="donut-legend">
       ${slices.map((s, i) => `
-        <div class="donut-legend-item" data-index="${i}">
+        <div class="donut-legend-item">
           <span class="donut-legend-dot" style="background:${s.color}"></span>
           ${escapeHtml(s.name)} ${formatDurationShort(s.val)}
         </div>
@@ -3068,26 +3172,6 @@ function renderDonutChart(taskEntries, selDate) {
   </div>`;
 
   container.innerHTML = html;
-
-  // 点击切片 → 钻取或爆炸
-  container.querySelectorAll('.donut-slice').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const idx = parseInt(el.dataset.index);
-      const slice = slices[idx];
-      handleSliceClick(slice);
-    });
-  });
-
-  // 返回按钮
-  const backBtn = document.getElementById('donutBackBtn');
-  if (backBtn) {
-    backBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      pieDrillParent = null;
-      renderStats();
-    });
-  }
 }
 
 function donutPath(cx, cy, r, inner, startAngle, endAngle) {
@@ -3104,31 +3188,9 @@ function donutPath(cx, cy, r, inner, startAngle, endAngle) {
   return `M ${x1o} ${y1o} A ${r} ${r} 0 ${large} 1 ${x2o} ${y2o} L ${x1i} ${y1i} A ${inner} ${inner} 0 ${large} 0 ${x2i} ${y2i} Z`;
 }
 
-function handleSliceClick(slice) {
-  const today = new Date().toISOString().slice(0, 10);
-  const refDate = statsDate || today;
-
-  // 检查是否有子任务可钻取
-  const parentTask = stats.todoList.find(t =>
-    t.date === refDate && t.text === slice.name && !t.parentId
-  );
-  const hasChildren = parentTask && stats.todoList.some(t =>
-    t.date === refDate && t.parentId === parentTask.id && (t.totalSeconds || 0) > 0
-  );
-
-  if (hasChildren && pieDrillParent !== slice.name) {
-    pieDrillParent = slice.name;
-    renderStats();
-  } else if (pieDrillParent) {
-    pieDrillParent = null;
-    renderStats();
-  }
-}
-
 // 统计面板事件
 btnStats.addEventListener('click', () => {
   statsDate = null;
-  pieDrillParent = null;
   chartMode = 'week';
   chartOffset = 0;
   settingsOverlay.classList.remove('open');
