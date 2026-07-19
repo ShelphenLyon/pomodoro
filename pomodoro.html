@@ -3063,34 +3063,44 @@ function buildDonutEntries(refDate) {
   const children = items.filter(t => t.parentId);
   const COLORS = DONUT_COLORS;
 
+  // 从 sessionHistory 计算各任务的时间（比 totalSeconds 更可靠，不会被 cleanup 清零）
+  const sessions = stats.sessionHistory.filter(s => s.date === refDate);
+  const taskTime = {};
+  sessions.forEach(s => {
+    const key = s.task || '未命名';
+    taskTime[key] = (taskTime[key] || 0) + s.duration;
+  });
+
   const entries = [];
+  const usedNames = new Set();
+
   parents.forEach((p, i) => {
-    const subs = children.filter(c => c.parentId === p.id && (c.totalSeconds || 0) > 0);
-    const total = p.totalSeconds || 0;
-    if (total > 0 || subs.length > 0) {
+    const subs = children.filter(c => c.parentId === p.id);
+    const parentOwn = taskTime[p.text] || 0;
+    const childEntries = [];
+    subs.forEach(c => {
+      const ct = taskTime[c.text] || 0;
+      if (ct > 0) {
+        childEntries.push({ name: c.text, totalSeconds: ct });
+        usedNames.add(c.text);
+      }
+    });
+    const total = parentOwn + childEntries.reduce((s, c) => s + c.totalSeconds, 0);
+    usedNames.add(p.text);
+
+    if (total > 0) {
       entries.push({
         name: p.text,
         totalSeconds: total,
-        children: subs.map(c => ({ name: c.text, totalSeconds: c.totalSeconds || 0 })),
+        children: childEntries,
         color: COLORS[i % COLORS.length],
       });
     }
   });
 
   // 补充不在 todoList 中但有 session 记录的任务
-  const usedNames = new Set(entries.map(e => e.name));
-  // 子任务名也排除，避免重复出现在扇形图中
-  entries.forEach(e => e.children.forEach(c => usedNames.add(c.name)));
-  const sessions = stats.sessionHistory.filter(s => s.date === refDate);
-  const extraMap = {};
-  sessions.forEach(s => {
-    const key = s.task || '未命名';
-    if (!usedNames.has(key)) {
-      extraMap[key] = (extraMap[key] || 0) + s.duration;
-    }
-  });
-  Object.entries(extraMap).forEach(([name, sec], i) => {
-    if (sec > 0) {
+  Object.entries(taskTime).forEach(([name, sec], i) => {
+    if (!usedNames.has(name) && sec > 0) {
       entries.push({
         name,
         totalSeconds: sec,
