@@ -2437,10 +2437,6 @@ document.getElementById('themeOptions').addEventListener('click', (e) => {
 // ═══════════════════════════════════════════
 function cleanupOldTodos() {
   const today = new Date().toISOString().slice(0, 10);
-  stats.todoList = stats.todoList.filter(t => {
-    if (t.date !== today && t.done) return false;
-    return true;
-  });
   stats.todoList.forEach(t => {
     if (t.date !== today) { t.date = today; t.done = false; t.totalSeconds = 0; }
   });
