@@ -703,6 +703,43 @@
     margin-bottom: 2px;
   }
 
+  /* 专注记录列表 */
+  .session-list {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .session-list::-webkit-scrollbar { width: 3px; }
+  .session-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .session-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #1e2d4a;
+    font-size: 13px;
+  }
+  .session-row:last-child { border-bottom: none; }
+  .session-task {
+    flex: 1;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .session-time {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    min-width: 42px;
+  }
+  .session-dur {
+    color: var(--accent-up);
+    font-weight: 600;
+    font-size: 12px;
+    min-width: 52px;
+    text-align: right;
+  }
+
   /* 图表导航 */
   .chart-nav {
     display: flex; align-items: center; justify-content: center;
@@ -2989,6 +3026,25 @@ function renderStats() {
       </div>
     </div>
   </div>`;
+
+  // ── 专注记录列表 ──
+  html += `<div class="stats-section"><h4>专注记录</h4>`;
+  if (selSessions.length === 0) {
+    html += `<div class="stats-empty">暂无记录</div>`;
+  } else {
+    html += `<div class="session-list">`;
+    selSessions.sort((a, b) => b.timestamp - a.timestamp).forEach(s => {
+      const t = new Date(s.timestamp);
+      const timeStr = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+      html += `<div class="session-row">
+        <span class="session-task">${escapeHtml(s.task || '未命名')}</span>
+        <span class="session-time">${timeStr}</span>
+        <span class="session-dur">${formatDuration(s.duration)}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
 
   statsContent.innerHTML = html;
 
