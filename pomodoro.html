@@ -50,6 +50,17 @@
   body.has-bg::before {
     background: rgba(0, 0, 0, 0.45);
   }
+  body.has-bg .app {
+    background: transparent;
+  }
+  body.has-bg .app::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--card-bg);
+    opacity: 0.618;
+    border-radius: 24px;
+    z-index: -1;
+  }
   body.hydration-playing::before {
     background: transparent !important;
   }
@@ -234,7 +245,7 @@
   /* ── 设置 / 齿轮 ── */
   .btn-settings {
     position: absolute;
-    top: 18px; right: 18px;
+    top: 8px; right: 14px;
     width: 36px; height: 36px;
     font-size: 18px;
     border: none;
@@ -437,7 +448,7 @@
   /* ── 统计按钮 ── */
   .btn-stats {
     position: absolute;
-    top: 18px; right: 60px;
+    top: 8px; right: 58px;
     width: 36px; height: 36px;
     font-size: 18px;
     border: none;
@@ -602,12 +613,12 @@
     margin-bottom: 8px;
   }
   .donut-svg {
-    width: 200px; height: 200px;
+    width: 248px; height: 248px;
     cursor: pointer;
   }
   .donut-slice {
     transition: transform 0.3s, opacity 0.3s;
-    transform-origin: 100px 100px;
+    transform-origin: 124px 124px;
   }
   .donut-slice:hover { opacity: 0.85; }
   .donut-slice.exploded {
@@ -661,6 +672,14 @@
   }
   .donut-group:hover .donut-outer-ring {
     opacity: 0.7;
+  }
+  .donut-outer-label {
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+  .donut-group:hover .donut-outer-label {
+    opacity: 1;
   }
 
   /* 每小时柱形图 */
@@ -1099,7 +1118,7 @@
     width: 320px; min-width: 240px; max-width: 600px;
     background: var(--card-bg);
     z-index: 50;
-    transform: translateX(calc(100% - 44px));
+    transform: translateX(100%);
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex; flex-direction: column;
     box-shadow: -4px 0 24px rgba(0,0,0,0.3);
@@ -2448,19 +2467,19 @@ const THEMES = {
             text: '#e0e0e0', textSec: '#a0a0b8', tabBar: '#0d1b33', tabInactive: '#a0a0b8' },
   sky:    { work: '#3498db', short: '#2ecc71', long: '#e74c3c', up: '#2980b9',
             bg: '#dceefb', card: '#e3f0fa', ringBg: '#c8dff2', input: '#ecf4fc', btnBg: '#d4e6f5', btnHover: '#bed8f0',
-            text: '#2c3e50', textSec: '#7f8c8d', tabBar: '#c8d8e8', tabInactive: '#7f8c8d' },
+            text: '#1a2538', textSec: '#5a6a6b', tabBar: '#c8d8e8', tabInactive: '#7f8c8d' },
   mint:   { work: '#27ae60', short: '#f39c12', long: '#3498db', up: '#2ecc71',
             bg: '#d5f0df', card: '#ddf3e6', ringBg: '#c0e8d0', input: '#e8f7ed', btnBg: '#ceecda', btnHover: '#b8e0c8',
-            text: '#2c3e50', textSec: '#7f8c8d', tabBar: '#b8d8c4', tabInactive: '#6b8b7b' },
+            text: '#1a2538', textSec: '#5a6a6b', tabBar: '#b8d8c4', tabInactive: '#6b8b7b' },
   cream:  { work: '#e67e22', short: '#2ecc71', long: '#3498db', up: '#f39c12',
             bg: '#fdf0dc', card: '#fef5e8', ringBg: '#f5e4c8', input: '#fef8ef', btnBg: '#f8e8d0', btnHover: '#f0d8b8',
-            text: '#4a3728', textSec: '#8c7b6b', tabBar: '#e8d5b8', tabInactive: '#8c7b6b' },
+            text: '#2d1f15', textSec: '#6a5248', tabBar: '#e8d5b8', tabInactive: '#8c7b6b' },
   lavender:{ work: '#9b59b6', short: '#2ecc71', long: '#3498db', up: '#8e44ad',
             bg: '#e8dcf2', card: '#efe5f5', ringBg: '#dcc8e8', input: '#f2ecf7', btnBg: '#e4d4ef', btnHover: '#d4c0e5',
-            text: '#3d2c4a', textSec: '#8c7b9b', tabBar: '#d4c4e0', tabInactive: '#7b6b8c' },
+            text: '#251a30', textSec: '#6a5a7a', tabBar: '#d4c4e0', tabInactive: '#7b6b8c' },
   rose:   { work: '#e91e63', short: '#2ecc71', long: '#3498db', up: '#ec407a',
             bg: '#fce4ec', card: '#fdeaef', ringBg: '#f8d0dc', input: '#fef0f4', btnBg: '#fadce4', btnHover: '#f4c8d4',
-            text: '#4a2c38', textSec: '#9b7b88', tabBar: '#e8ccd4', tabInactive: '#8b6b7b' },
+            text: '#2d1822', textSec: '#7a5a68', tabBar: '#e8ccd4', tabInactive: '#8b6b7b' },
 };
 
 function applyTheme(name) {
@@ -2631,7 +2650,7 @@ function syncParentDone() {
   parents.forEach(p => {
     const children = stats.todoList.filter(t => t.date === today && t.parentId === p.id);
     if (children.length === 0) return;
-    if (children.every(c => c.done)) {
+    if (children.some(c => c.done)) {
       p.done = true;
     } else {
       p.done = false;
@@ -3024,7 +3043,7 @@ function renderStats() {
     html += `<div class="hourly-bar-col" title="${d.hour}:00 - ${formatDurationShort(d.totalSec)}">
       <span class="hourly-bar-time">${d.totalSec > 0 ? formatDurationShort(d.totalSec) : ''}</span>
       <div class="hourly-bar" style="height:${h}%"></div>
-      <span class="hourly-bar-label">${d.hour}时</span>
+      <span class="hourly-bar-label">${d.hour}</span>
     </div>`;
   });
   html += `</div></div>`;
@@ -3233,7 +3252,7 @@ function renderDonutChart(entries, selDate) {
     const endAngle = currentAngle + sliceAngle;
     currentAngle = endAngle;
 
-    // 子任务外环
+    // 子任务外环 + 文字标签
     let outerPaths = '';
     if (e.children && e.children.length > 0) {
       const childTotal = e.children.reduce((s, c) => s + c.totalSeconds, 0);
@@ -3245,7 +3264,12 @@ function renderDonutChart(entries, selDate) {
           const cs = ca;
           const ce = ca + cAngle;
           ca = ce;
-          return `<path class="donut-outer-ring" d="${donutPath(DONUT_CX, DONUT_CY, OUTER_R, OUTER_INNER, cs, ce)}" fill="${childColors[ci % childColors.length]}"><title>${escapeHtml(c.name)}: ${formatDuration(c.totalSeconds)}</title></path>`;
+          const midA = (cs + ce) / 2;
+          const lx = DONUT_CX + (OUTER_R + 8) * Math.cos(midA);
+          const ly = DONUT_CY + (OUTER_R + 8) * Math.sin(midA);
+          const anchor = midA > Math.PI / 2 && midA < Math.PI * 3 / 2 ? 'end' : 'start';
+          return `<path class="donut-outer-ring" d="${donutPath(DONUT_CX, DONUT_CY, OUTER_R, OUTER_INNER, cs, ce)}" fill="${childColors[ci % childColors.length]}"><title>${escapeHtml(c.name)}: ${formatDuration(c.totalSeconds)}</title></path>
+            <text class="donut-outer-label" x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="9" fill="var(--text)">${escapeHtml(c.name)}</text>`;
         }).join('');
       }
     }
@@ -3255,7 +3279,7 @@ function renderDonutChart(entries, selDate) {
   });
 
   const html = `<div class="donut-wrap">
-    <svg class="donut-svg" viewBox="0 0 200 200">
+    <svg class="donut-svg" viewBox="-25 -25 250 250">
       ${slices.map((s, i) => `
         <g class="donut-group">
           <path class="donut-slice" d="${s.path}" fill="${s.color}">
