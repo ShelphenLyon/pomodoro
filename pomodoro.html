@@ -703,6 +703,31 @@
     margin-bottom: 2px;
   }
 
+  /* 专注记录折叠开关 */
+  .session-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--input-bg);
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    transition: all 0.2s;
+  }
+  .session-toggle:hover { color: #fff; background: #1a2a45; }
+  .session-toggle.open { color: var(--accent-up); }
+  .session-arrow {
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+  .session-list-wrap {
+    margin-bottom: 16px;
+  }
+
   /* 专注记录列表 */
   .session-list {
     max-height: 240px;
@@ -2939,6 +2964,30 @@ function renderStats() {
   });
   html += `</div>`;
 
+  // ── 专注记录（可折叠）──
+  selSessions.sort((a, b) => b.timestamp - a.timestamp);
+  html += `<div class="session-toggle" id="sessionToggle">
+    <span>专注记录 (${selSessions.length}条)</span>
+    <span class="session-arrow">▶</span>
+  </div>
+  <div class="session-list-wrap" id="sessionListWrap" style="display:none">`;
+  if (selSessions.length === 0) {
+    html += `<div class="stats-empty">暂无记录</div>`;
+  } else {
+    html += `<div class="session-list">`;
+    selSessions.forEach(s => {
+      const t = new Date(s.timestamp);
+      const timeStr = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+      html += `<div class="session-row">
+        <span class="session-task">${escapeHtml(s.task || '未命名')}</span>
+        <span class="session-time">${timeStr}</span>
+        <span class="session-dur">${formatDuration(s.duration)}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
   // ── 当日概览 ──
   const dateLabel = selDate === today ? '今日总览' : `${selDate} 总览`;
   html += `<div class="stats-section">
@@ -3027,26 +3076,19 @@ function renderStats() {
     </div>
   </div>`;
 
-  // ── 专注记录列表 ──
-  html += `<div class="stats-section"><h4>专注记录</h4>`;
-  if (selSessions.length === 0) {
-    html += `<div class="stats-empty">暂无记录</div>`;
-  } else {
-    html += `<div class="session-list">`;
-    selSessions.sort((a, b) => b.timestamp - a.timestamp).forEach(s => {
-      const t = new Date(s.timestamp);
-      const timeStr = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
-      html += `<div class="session-row">
-        <span class="session-task">${escapeHtml(s.task || '未命名')}</span>
-        <span class="session-time">${timeStr}</span>
-        <span class="session-dur">${formatDuration(s.duration)}</span>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-  html += `</div>`;
-
   statsContent.innerHTML = html;
+
+  // 专注记录折叠切换
+  const toggle = document.getElementById('sessionToggle');
+  const wrap = document.getElementById('sessionListWrap');
+  if (toggle && wrap) {
+    toggle.addEventListener('click', () => {
+      const isOpen = wrap.style.display !== 'none';
+      wrap.style.display = isOpen ? 'none' : 'block';
+      toggle.classList.toggle('open', !isOpen);
+      toggle.querySelector('.session-arrow').textContent = isOpen ? '▶' : '▼';
+    });
+  }
 
   // 日期芯片点击
   statsContent.querySelectorAll('.date-chip').forEach(chip => {
