@@ -188,7 +188,7 @@
     font-weight: 700;
     letter-spacing: 2px;
     font-variant-numeric: tabular-nums;
-    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Menlo', monospace;
+    font-family: 'Georgia', 'Noto Serif SC', 'Source Han Serif SC', 'STSong', 'SimSun', serif;
   }
   .timer-label {
     font-size: 13px;
@@ -336,6 +336,33 @@
   }
 
   /* ── 背景图片设置 ── */
+  .settings-page { display: none; }
+  .settings-page.active { display: block; }
+  .settings-menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 4px;
+    background: var(--input-bg);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .settings-menu-item:hover { background: #1a2a45; }
+  .menu-arrow { font-size: 18px; color: var(--text-secondary); }
+  .settings-back {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-work);
+    cursor: pointer;
+    padding: 4px 0 16px;
+    transition: color 0.2s;
+  }
+  .settings-back:hover { color: var(--text); }
   .settings-divider {
     height: 1px;
     background: #2a3a5a;
@@ -615,6 +642,7 @@
   .donut-svg {
     width: 248px; height: 248px;
     cursor: pointer;
+    overflow: visible;
   }
   .donut-slice {
     transition: transform 0.3s, opacity 0.3s;
@@ -709,6 +737,19 @@
     transition: height 0.4s;
     opacity: 0.8;
     min-height: 0;
+  }
+  .bar-stack {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+    background: transparent !important;
+  }
+  .bar-stack > div {
+    width: 100%;
+    min-height: 2px;
+    transition: height 0.4s;
   }
   .hourly-bar-label {
     font-size: 9px;
@@ -1407,71 +1448,100 @@
 <!-- 设置面板 -->
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel">
-    <h3>设置</h3>
-    <div class="setting-row">
-      <label>工作时长</label>
-      <input type="range" id="rangeWork" min="5" max="60" value="25" step="1">
-      <span class="val" id="valWork">25 分钟</span>
+    <!-- 主菜单 -->
+    <div class="settings-page active" id="settingsMain">
+      <h3>设置</h3>
+      <div class="settings-menu-item" data-page="timer">计时设置 <span class="menu-arrow">›</span></div>
+      <div class="settings-menu-item" data-page="appearance">外观 <span class="menu-arrow">›</span></div>
+      <div class="settings-menu-item" data-page="notify">通知管理 <span class="menu-arrow">›</span></div>
+      <button class="btn-close-settings" id="btnCloseSettings" style="margin-top:20px">完成</button>
     </div>
-    <div class="setting-row">
-      <label>短休时长</label>
-      <input type="range" id="rangeShort" min="1" max="30" value="5" step="1">
-      <span class="val" id="valShort">5 分钟</span>
+    <!-- 计时设置 -->
+    <div class="settings-page" id="settingsTimer">
+      <div class="settings-back" data-back="main">← 计时设置</div>
+      <div class="setting-row">
+        <label>工作时长</label>
+        <input type="range" id="rangeWork" min="5" max="60" value="25" step="1">
+        <span class="val" id="valWork">25 分钟</span>
+      </div>
+      <div class="setting-row">
+        <label>短休时长</label>
+        <input type="range" id="rangeShort" min="1" max="30" value="5" step="1">
+        <span class="val" id="valShort">5 分钟</span>
+      </div>
+      <div class="setting-row">
+        <label>长休时长</label>
+        <input type="range" id="rangeLong" min="5" max="45" value="15" step="1">
+        <span class="val" id="valLong">15 分钟</span>
+      </div>
     </div>
-    <div class="setting-row">
-      <label>长休时长</label>
-      <input type="range" id="rangeLong" min="5" max="45" value="15" step="1">
-      <span class="val" id="valLong">15 分钟</span>
+    <!-- 外观 -->
+    <div class="settings-page" id="settingsAppearance">
+      <div class="settings-back" data-back="main">← 外观</div>
+      <div class="setting-row" style="margin-bottom:8px">
+        <label>主题色调</label>
+      </div>
+      <div class="theme-options" id="themeOptions" style="margin-bottom:18px">
+        <span class="theme-dot active" data-theme="red" style="background:#16213e;border:2px solid #e74c3c" title="经典暗夜"></span>
+        <span class="theme-dot" data-theme="sky" style="background:#e3f0fa;border:2px solid #3498db" title="天空蓝"></span>
+        <span class="theme-dot" data-theme="mint" style="background:#ddf3e6;border:2px solid #27ae60" title="薄荷绿"></span>
+        <span class="theme-dot" data-theme="cream" style="background:#fef5e8;border:2px solid #e67e22" title="奶油橘"></span>
+        <span class="theme-dot" data-theme="lavender" style="background:#efe5f5;border:2px solid #9b59b6" title="薰衣草"></span>
+        <span class="theme-dot" data-theme="rose" style="background:#fdeaef;border:2px solid #e91e63" title="蔷薇粉"></span>
+      </div>
+      <div class="setting-row" style="margin-bottom:10px">
+        <label>背景图片</label>
+      </div>
+      <div class="bg-options">
+        <input type="file" id="bgFileInput" accept="image/*" style="display:none">
+        <button class="btn-bg-option" id="btnBgFile">本地图片</button>
+        <button class="btn-bg-option" id="btnBgUrl">图片链接</button>
+        <button class="btn-bg-option btn-bg-remove" id="btnBgRemove">移除</button>
+      </div>
+      <div class="bg-url-row" id="bgUrlRow" style="display:none">
+        <input type="text" id="bgUrlInput" placeholder="粘贴图片 URL...">
+        <button id="btnBgUrlApply">应用</button>
+      </div>
     </div>
-    <div class="setting-row">
-      <label>提示音量</label>
-      <input type="range" id="rangeVolume" min="0" max="100" value="60" step="5">
-      <span class="val" id="valVolume">60%</span>
+    <!-- 通知管理 -->
+    <div class="settings-page" id="settingsNotify">
+      <div class="settings-back" data-back="main">← 通知管理</div>
+      <div class="settings-menu-item" data-page="volume">提示音量 <span class="menu-arrow">›</span></div>
+      <div class="settings-menu-item" data-page="hydration">补水提醒 <span class="menu-arrow">›</span></div>
     </div>
-    <div class="setting-row" style="margin-bottom:8px">
-      <label>主题色调</label>
+    <!-- 提示音量子页 -->
+    <div class="settings-page" id="settingsVolume">
+      <div class="settings-back" data-back="notify">← 提示音量</div>
+      <div class="setting-row">
+        <label>音量</label>
+        <input type="range" id="rangeVolume" min="0" max="100" value="60" step="5">
+        <span class="val" id="valVolume">60%</span>
+      </div>
     </div>
-    <div class="theme-options" id="themeOptions">
-      <span class="theme-dot active" data-theme="red" style="background:#16213e;border:2px solid #e74c3c" title="经典暗夜"></span>
-      <span class="theme-dot" data-theme="sky" style="background:#e3f0fa;border:2px solid #3498db" title="天空蓝"></span>
-      <span class="theme-dot" data-theme="mint" style="background:#ddf3e6;border:2px solid #27ae60" title="薄荷绿"></span>
-      <span class="theme-dot" data-theme="cream" style="background:#fef5e8;border:2px solid #e67e22" title="奶油橘"></span>
-      <span class="theme-dot" data-theme="lavender" style="background:#efe5f5;border:2px solid #9b59b6" title="薰衣草"></span>
-      <span class="theme-dot" data-theme="rose" style="background:#fdeaef;border:2px solid #e91e63" title="蔷薇粉"></span>
+    <!-- 补水提醒子页 -->
+    <div class="settings-page" id="settingsHydration">
+      <div class="settings-back" data-back="notify">← 补水提醒</div>
+      <div class="setting-row">
+        <label>开启提醒</label>
+        <label class="toggle-switch" style="width:44px;height:24px;position:relative;display:inline-block;">
+          <input type="checkbox" id="toggleHydration">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="setting-row">
+        <label>提醒间隔</label>
+        <input type="range" id="rangeHydration" min="1" max="120" value="60" step="1">
+        <span class="val" id="valHydration">60 分钟</span>
+      </div>
+      <div class="setting-row" style="margin-bottom:6px">
+        <label>提醒视频</label>
+      </div>
+      <div class="bg-options" style="margin-bottom:8px">
+        <input type="file" id="hydrationFileInput" accept="video/*" style="display:none">
+        <button class="btn-bg-option" id="btnHydrationFile">选择视频</button>
+        <span id="hydrationFileName" style="font-size:11px;color:var(--text-secondary);align-self:center;">未选择视频</span>
+      </div>
     </div>
-    <div class="settings-divider"></div>
-    <div class="setting-row" style="margin-bottom:10px">
-      <label>背景图片</label>
-    </div>
-    <div class="bg-options">
-      <input type="file" id="bgFileInput" accept="image/*" style="display:none">
-      <button class="btn-bg-option" id="btnBgFile">本地图片</button>
-      <button class="btn-bg-option" id="btnBgUrl">图片链接</button>
-      <button class="btn-bg-option btn-bg-remove" id="btnBgRemove">移除</button>
-    </div>
-    <div class="bg-url-row" id="bgUrlRow" style="display:none">
-      <input type="text" id="bgUrlInput" placeholder="粘贴图片 URL...">
-      <button id="btnBgUrlApply">应用</button>
-    </div>
-    <div class="settings-divider"></div>
-    <div class="setting-row">
-      <label>补水提醒</label>
-      <label class="toggle-switch" style="width:44px;height:24px;position:relative;display:inline-block;">
-        <input type="checkbox" id="toggleHydration">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="setting-row">
-      <label>提醒间隔</label>
-      <input type="range" id="rangeHydration" min="1" max="120" value="60" step="1">
-      <span class="val" id="valHydration">60 分钟</span>
-    </div>
-    <div class="bg-options" style="margin-bottom:8px">
-      <input type="file" id="hydrationFileInput" accept="video/*" style="display:none">
-      <button class="btn-bg-option" id="btnHydrationFile">选择视频</button>
-      <span id="hydrationFileName" style="font-size:11px;color:var(--text-secondary);align-self:center;">未选择视频</span>
-    </div>
-    <button class="btn-close-settings" id="btnCloseSettings">完成</button>
   </div>
 </div>
 
@@ -2157,14 +2227,38 @@ modeTabs.addEventListener('click', (e) => {
 
 // 设置
 btnSettings.addEventListener('click', () => {
-  statsOverlay.classList.remove('open'); // 关闭统计面板
+  statsOverlay.classList.remove('open');
   updateRanges();
+  showSettingsPage($('#settingsMain'));
   settingsOverlay.classList.add('open');
 });
 
 btnCloseSettings.addEventListener('click', () => {
   settingsOverlay.classList.remove('open');
 });
+
+// 设置面板页面导航
+$('.settings-panel').addEventListener('click', (e) => {
+  const item = e.target.closest('.settings-menu-item');
+  if (item) {
+    const page = item.dataset.page;
+    const el = document.getElementById('settings' + page.charAt(0).toUpperCase() + page.slice(1));
+    if (el) { showSettingsPage(el); }
+    return;
+  }
+  const back = e.target.closest('.settings-back');
+  if (back) {
+    const target = back.dataset.back;
+    const el = document.getElementById('settings' + target.charAt(0).toUpperCase() + target.slice(1));
+    if (el) { showSettingsPage(el); }
+    return;
+  }
+});
+
+function showSettingsPage(el) {
+  $('.settings-panel').querySelectorAll('.settings-page').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
 
 settingsOverlay.addEventListener('click', (e) => {
   if (e.target === settingsOverlay) {
@@ -2949,6 +3043,34 @@ function getSessionsByDate(date) {
   return stats.sessionHistory.filter(s => s.date === date && s.task);
 }
 
+// 映射任务名到母任务名
+function getParentName(taskName) {
+  const item = stats.todoList.find(t => t.text === taskName && t.parentId);
+  if (item) {
+    const parent = stats.todoList.find(t => t.id === item.parentId);
+    if (parent) return parent.text;
+  }
+  return taskName || '未命名';
+}
+
+// 柱状图分段渲染：返回堆叠的彩色 segment div（各段高度之和=100%）
+function renderBarSegments(sessions, taskColors) {
+  const groups = {};
+  sessions.forEach(s => {
+    const p = getParentName(s.task);
+    groups[p] = (groups[p] || 0) + s.duration;
+  });
+  const total = Object.values(groups).reduce((s, v) => s + v, 0);
+  if (total === 0) return '';
+
+  const entries = Object.entries(groups).sort((a, b) => a[1] - b[1]);
+  return entries.map(([name, sec]) => {
+    const h = Math.max(Math.round((sec / total) * 100), 1);
+    const c = taskColors[name] || '#555';
+    return `<div style="height:${h}%;background:${c};flex-shrink:1" title="${escapeHtml(name)}: ${formatDurationShort(sec)}"></div>`;
+  }).join('');
+}
+
 function renderStats() {
   const today = new Date().toISOString().slice(0, 10);
   const selDate = statsDate || today;
@@ -3027,29 +3149,37 @@ function renderStats() {
     </div>
   </div>`;
 
+  // ── 任务颜色映射 ──
+  const taskColorMap = {};
+  donutEntries.forEach((e, i) => { taskColorMap[e.name] = e.color; });
+  let extraColorIdx = donutEntries.length;
+  function getTaskColor(name) {
+    if (!taskColorMap[name]) taskColorMap[name] = DONUT_COLORS[extraColorIdx++ % DONUT_COLORS.length];
+    return taskColorMap[name];
+  }
+
   // ── 每小时学习量 ──
   const hourlyData = [];
   for (let h = 0; h < 24; h++) {
-    const totalSec = selSessions
-      .filter(s => new Date(s.timestamp).getHours() === h)
-      .reduce((sum, s) => sum + s.duration, 0);
-    hourlyData.push({ hour: h, totalSec });
+    const hourSessions = selSessions.filter(s => new Date(s.timestamp).getHours() === h);
+    hourlyData.push({ hour: h, sessions: hourSessions });
   }
-  const maxHourly = Math.max(...hourlyData.map(d => d.totalSec), 1);
-  html += `<div class="stats-section"><h4>每小时学习量</h4>
+  const maxHourly = Math.max(...hourlyData.map(d => d.sessions.reduce((s, r) => s + r.duration, 0)), 1);
+  html += `<div class="stats-section"><h4>任务时段分布</h4>
     <div class="hourly-chart">`;
   hourlyData.forEach(d => {
-    const h = maxHourly > 0 ? Math.max(Math.round((d.totalSec / maxHourly) * 60), d.totalSec > 0 ? 2 : 0) : 0;
-    html += `<div class="hourly-bar-col" title="${d.hour}:00 - ${formatDurationShort(d.totalSec)}">
-      <span class="hourly-bar-time">${d.totalSec > 0 ? formatDurationShort(d.totalSec) : ''}</span>
-      <div class="hourly-bar" style="height:${h}%"></div>
+    const totalSec = d.sessions.reduce((s, r) => s + r.duration, 0);
+    const barH = maxHourly > 0 ? Math.max(Math.round((totalSec / maxHourly) * 60), totalSec > 0 ? 2 : 0) : 0;
+    html += `<div class="hourly-bar-col" title="${d.hour}:00 - ${formatDurationShort(totalSec)}">
+      <span class="hourly-bar-time">${totalSec > 0 ? formatDurationShort(totalSec) : ''}</span>
+      <div class="hourly-bar bar-stack" style="height:${barH}%">${renderBarSegments(d.sessions, taskColorMap)}</div>
       <span class="hourly-bar-label">${d.hour}</span>
     </div>`;
   });
   html += `</div></div>`;
 
-  // ── 当日任务分布（环形图）──
-  html += `<div class="stats-section"><h4>${selDate === today ? '今日' : selDate} 任务分布</h4>`;
+  // ── 当日任务占比（环形图）──
+  html += `<div class="stats-section"><h4>${selDate === today ? '今日' : selDate} 任务占比</h4>`;
   if (donutEntries.length === 0) {
     html += `<div class="stats-empty">${selDate === today ? '今天' : '该日期'}还没有记录</div>`;
   } else {
@@ -3059,6 +3189,7 @@ function renderStats() {
 
   // ── 时间范围图表（周/月/年可切换+导航）──
   html += `<div class="stats-section">
+    <h4>任务统计</h4>
     <div class="chart-nav">
       <button class="chart-nav-arrow" id="chartNavPrev" title="上一个">◀</button>
       <span class="chart-nav-label">${navLabel}</span>
@@ -3071,11 +3202,20 @@ function renderStats() {
     </div>
     <div class="week-chart" id="weekChart">`;
   chartData.forEach(d => {
-    const h = d.totalSec > 0 ? Math.max(Math.round((d.totalSec / maxSec) * 100), 2) : 0;
+    const totalSec = d.totalSec;
+    const h = totalSec > 0 ? Math.max(Math.round((totalSec / maxSec) * 100), 2) : 0;
     const isSel = d.date === selDate || (chartMode === 'year' && selDate && selDate.startsWith(d.date));
+    // 取该日期/月的 sessions 用于分段
+    let bucketSessions;
+    if (chartMode === 'year') {
+      bucketSessions = stats.sessionHistory.filter(s => s.date.startsWith(d.date));
+    } else {
+      bucketSessions = stats.sessionHistory.filter(s => s.date === d.date);
+    }
+    const segments = renderBarSegments(bucketSessions, taskColorMap);
     html += `<div class="week-bar-col" data-date="${d.date}" style="cursor:pointer" title="${d.date}">
-      <span class="week-bar-time">${d.totalSec > 0 ? formatDurationShort(d.totalSec) : ''}</span>
-      <div class="week-bar${isSel ? ' today' : ''}" style="height:${Math.max(h, d.totalSec > 0 ? 2 : 0)}%;${isSel ? 'opacity:1' : ''}"></div>
+      <span class="week-bar-time">${totalSec > 0 ? formatDurationShort(totalSec) : ''}</span>
+      <div class="week-bar bar-stack${isSel ? ' today' : ''}" style="height:${Math.max(h, totalSec > 0 ? 2 : 0)}%">${segments}</div>
       <span class="week-bar-label">${chartMode === 'month' ? (d.label || '') : d.label}</span>
     </div>`;
   });
@@ -3173,20 +3313,20 @@ let statsDate = null;       // 统计面板选中的日期（null = 今天）
 let chartMode = 'week';     // 'week' | 'month' | 'year'
 let chartOffset = 0;        // 偏移量（0=当前, -1=上一, 1=下一）
 
-// 从 todoList 构建母任务列表（子任务时间已累积到母任务）
+// 从 todoList + sessionHistory 构建扇形图数据
 function buildDonutEntries(refDate) {
-  const items = stats.todoList.filter(t => t.date === refDate);
-  const parents = items.filter(t => !t.parentId);
-  const children = items.filter(t => t.parentId);
   const COLORS = DONUT_COLORS;
-
-  // 从 sessionHistory 计算各任务的时间（比 totalSeconds 更可靠，不会被 cleanup 清零）
   const sessions = stats.sessionHistory.filter(s => s.date === refDate);
   const taskTime = {};
   sessions.forEach(s => {
     const key = s.task || '未命名';
     taskTime[key] = (taskTime[key] || 0) + s.duration;
   });
+
+  // 用全部 todoList 的父子关系（不限日期），时间从 sessionHistory 取
+  const allItems = stats.todoList;
+  const parents = allItems.filter(t => !t.parentId);
+  const children = allItems.filter(t => t.parentId);
 
   const entries = [];
   const usedNames = new Set();
@@ -3236,7 +3376,7 @@ function renderDonutChart(entries, selDate) {
 
   const today = new Date().toISOString().slice(0, 10);
   const refDate = selDate || today;
-  const title = refDate === today ? '任务分布' : refDate;
+  const title = refDate === today ? '任务占比' : refDate;
 
   const total = entries.reduce((s, e) => s + e.totalSeconds, 0);
   if (total === 0) {
