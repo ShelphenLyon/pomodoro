@@ -159,6 +159,28 @@
     width: 260px;
     height: 260px;
     margin: 0 auto 32px;
+    transition: transform 0.8s ease-out;
+  }
+  .timer-ring-container.running .ripple {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 236px; height: 236px;
+    margin: -118px 0 0 -118px;
+    border-radius: 50%;
+    border: 4px solid var(--ripple-color, var(--accent-work));
+    animation: ripple 1s ease-out infinite;
+    pointer-events: none;
+    z-index: 5;
+  }
+  @keyframes ripple {
+    0%   { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(1.618); opacity: 0; }
+  }
+  .timer-ring-container.breathing.expand {
+    transform: scale(1.09);
+  }
+  .timer-ring-container.breathing.contract {
+    transform: scale(0.88);
   }
   .timer-ring {
     transform: rotate(-90deg);
@@ -740,7 +762,6 @@
     padding-right: 2px;
     pointer-events: none;
     z-index: 10;
-    transition: none;
   }
   .hourly-chart::-webkit-scrollbar { height: 2px; }
   .hourly-chart::-webkit-scrollbar-thumb { background: #333; border-radius: 1px; }
@@ -787,6 +808,7 @@
     color: var(--text);
     margin-bottom: 2px;
     opacity: 0;
+    transition: opacity 0.2s;
   }
   .hourly-bar-col:hover .hourly-bar-time { opacity: 1; }
 
@@ -1424,6 +1446,7 @@
 
   <!-- 计时器圆环 -->
   <div class="timer-ring-container">
+    <div class="ripple"></div>
     <svg class="timer-ring" viewBox="0 0 260 260">
       <circle class="ring-bg" cx="130" cy="130" r="118"></circle>
       <circle class="ring-progress" id="ringProgress" cx="130" cy="130" r="118"></circle>
@@ -1500,6 +1523,13 @@
         <label>长休时长</label>
         <input type="range" id="rangeLong" min="5" max="45" value="15" step="1">
         <span class="val" id="valLong">15 分钟</span>
+      </div>
+      <div class="setting-row">
+        <label>呼吸放松</label>
+        <label class="toggle-switch" style="width:44px;height:24px;position:relative;display:inline-block;">
+          <input type="checkbox" id="toggleBreathing">
+          <span class="toggle-slider"></span>
+        </label>
       </div>
     </div>
     <!-- 外观 -->
@@ -1684,6 +1714,7 @@ let settings = {
   hydrationEnabled: false,  // 补水提醒开关
   hydrationInterval: 60,    // 提醒间隔（分钟）
   hydrationVideoName: '', // 已选视频名
+  breathingMode: false,    // 呼吸放松模式
 };
 
 // 统计
@@ -1851,15 +1882,17 @@ function updateTimerDisplay() {
   // 补水提醒激活时，跳过正常计时器显示更新
   if (state.hydrationActive) return;
 
+  // 波纹颜色跟随专注/休息模式
+  document.documentElement.style.setProperty('--ripple-color', MODES[state.mode].accent);
+
   if (state.countUp) {
     // 正向计时：显示已用时间
     timerTime.textContent = formatTime(state.remaining);
-    // 进度环：以 total 为满环（默认 60 分钟）
     const progress = Math.min(state.remaining / state.total, 1);
     const offset = CIRCUMFERENCE * (1 - progress);
     ringProgress.style.strokeDasharray = `${CIRCUMFERENCE}`;
     ringProgress.style.strokeDashoffset = offset;
-    ringProgress.style.stroke = 'var(--accent-up)';
+    ringProgress.style.stroke = state.mode === 'work' ? 'var(--accent-up)' : MODES[state.mode].accent;
   } else {
     timerTime.textContent = formatTime(state.remaining);
     const progress = state.remaining / state.total;
@@ -1986,6 +2019,7 @@ function resetTimerForMode(mode) {
     state.total = duration;
   }
   refreshAllUI();
+  updateBreathing();
 }
 
 function startTimer() {
@@ -2017,6 +2051,7 @@ function startTimer() {
   }
   updateBtnMain();
   updateCountUpUI();
+  updateBreathing();
 }
 
 function pauseTimer() {
@@ -2030,6 +2065,7 @@ function pauseTimer() {
   timerEndTime = null;
   updateBtnMain();
   updateCountUpUI();
+  updateBreathing();
 }
 
 function toggleTimer() {
@@ -2115,6 +2151,7 @@ function timerComplete() {
   }
 
   saveData();
+  updateBreathing();
 }
 
 function stopCountUp() {
@@ -2166,6 +2203,7 @@ function stopCountUp() {
 
   saveData();
   updateCountUpUI();
+  updateBreathing();
 }
 
 function skipTimer() {
@@ -2214,6 +2252,7 @@ function resetTimer() {
   playClick();
   refreshAllUI();
   document.title = '🍅 番茄钟';
+  updateBreathing();
 }
 
 // ═══════════════════════════════════════════
@@ -2459,6 +2498,43 @@ toggleHydration.addEventListener('change', () => {
   if (!toggleHydration.checked) stopHydrationVideo();
   saveData();
 });
+
+// 呼吸放松开关
+const toggleBreathing = $('#toggleBreathing');
+toggleBreathing.checked = settings.breathingMode;
+toggleBreathing.addEventListener('change', () => {
+  settings.breathingMode = toggleBreathing.checked;
+  saveData();
+});
+
+let breathingInterval = null;
+function startBreathing() {
+  const ring = $('.timer-ring-container');
+  ring.classList.add('breathing');
+  let expanding = false;
+  function cycle() {
+    expanding = !expanding;
+    ring.classList.toggle('expand', expanding);
+    ring.classList.toggle('contract', !expanding);
+    ring.style.transition = expanding ? 'transform 4s ease-in-out' : 'transform 6s ease-in-out';
+    breathingInterval = setTimeout(cycle, expanding ? 4000 : 6000);
+  }
+  cycle();
+}
+function stopBreathing() {
+  const ring = $('.timer-ring-container');
+  ring.classList.remove('breathing', 'expand', 'contract');
+  ring.style.transition = 'transform 0.8s ease-out';
+  clearTimeout(breathingInterval);
+  breathingInterval = null;
+}
+function updateBreathing() {
+  const ring = $('.timer-ring-container');
+  ring.classList.toggle('running', state.status === 'running');
+  const active = settings.breathingMode && state.status === 'running' && state.mode !== 'work';
+  if (active && !breathingInterval) startBreathing();
+  else if (!active && breathingInterval) stopBreathing();
+}
 
 rangeHydration.addEventListener('input', () => {
   settings.hydrationInterval = parseInt(rangeHydration.value);
