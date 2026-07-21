@@ -220,6 +220,14 @@
     letter-spacing: 1px;
     text-transform: uppercase;
   }
+  .breathing-hint {
+    font-size: 12px;
+    color: var(--accent-short);
+    margin-top: 6px;
+    opacity: 0;
+    transition: opacity 0.6s;
+  }
+  .breathing-hint.show { opacity: 1; }
 
   /* ── 按钮 ── */
   .controls {
@@ -1454,6 +1462,7 @@
     <div class="timer-text">
       <div class="timer-time" id="timerTime">25:00</div>
       <div class="timer-label" id="timerLabel">专注工作</div>
+      <div class="breathing-hint" id="breathingHint">跟随计时呼吸放松吧！</div>
     </div>
   </div>
 
@@ -1714,7 +1723,7 @@ let settings = {
   hydrationEnabled: false,  // 补水提醒开关
   hydrationInterval: 60,    // 提醒间隔（分钟）
   hydrationVideoName: '', // 已选视频名
-  breathingMode: false,    // 呼吸放松模式
+  breathingMode: true,     // 呼吸放松模式
 };
 
 // 统计
@@ -1917,20 +1926,14 @@ function updateDots() {
 }
 
 function updateBtnMain() {
-  // 清除所有模式 class
   btnMain.classList.remove('work', 'short', 'long', 'countup', 'countup-stop');
-
-  if (state.countUp) {
-    if (state.status === 'running') {
-      btnMain.classList.add('countup-stop');
-      btnIcon.textContent = '⏹';
-    } else {
-      btnMain.classList.add('countup');
-      btnIcon.textContent = '▶';
-    }
+  btnMain.classList.add('work');
+  if (state.countUp && state.status === 'running') {
+    btnIcon.textContent = '⏹';
+  } else if (state.status === 'running') {
+    btnIcon.textContent = '⏸';
   } else {
-    btnMain.classList.add(state.mode);
-    btnIcon.textContent = state.status === 'running' ? '⏸' : '▶';
+    btnIcon.textContent = '▶';
   }
 }
 
@@ -2511,6 +2514,7 @@ let breathingInterval = null;
 function startBreathing() {
   const ring = $('.timer-ring-container');
   ring.classList.add('breathing');
+  $('#breathingHint').classList.add('show');
   let expanding = false;
   function cycle() {
     expanding = !expanding;
@@ -2525,6 +2529,7 @@ function stopBreathing() {
   const ring = $('.timer-ring-container');
   ring.classList.remove('breathing', 'expand', 'contract');
   ring.style.transition = 'transform 0.8s ease-out';
+  $('#breathingHint').classList.remove('show');
   clearTimeout(breathingInterval);
   breathingInterval = null;
 }
@@ -3281,12 +3286,29 @@ function renderStats() {
     return taskColorMap[name];
   }
 
-  // ── 每小时学习量 ──
+  // ── 每小时学习量（按实际占用时长分配）──
   const hourlyData = [];
-  for (let h = 0; h < 24; h++) {
-    const hourSessions = selSessions.filter(s => new Date(s.timestamp).getHours() === h);
-    hourlyData.push({ hour: h, sessions: hourSessions });
-  }
+  for (let h = 0; h < 24; h++) hourlyData.push({ hour: h, sessions: [] });
+  selSessions.forEach(s => {
+    const start = new Date(s.timestamp);
+    const totalMin = s.duration / 60;
+    let remaining = totalMin;
+    let h = start.getHours();
+    // 第一个小时：剩余分钟数
+    const firstMin = Math.min(60 - start.getMinutes(), remaining);
+    if (firstMin > 0) {
+      hourlyData[h].sessions.push({ task: s.task, duration: Math.round(firstMin * 60) });
+      remaining -= firstMin;
+    }
+    // 后续完整小时
+    h++;
+    while (remaining > 0 && h < 24) {
+      const chunk = Math.min(60, remaining);
+      hourlyData[h].sessions.push({ task: s.task, duration: Math.round(chunk * 60) });
+      remaining -= chunk;
+      h++;
+    }
+  });
   const maxHourly = Math.max(...hourlyData.map(d => d.sessions.reduce((s, r) => s + r.duration, 0)), 1);
   html += `<div class="stats-section"><h4>任务时段分布</h4>
     <div class="hourly-chart" style="position:relative">`;
