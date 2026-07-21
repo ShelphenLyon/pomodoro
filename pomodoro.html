@@ -2528,13 +2528,27 @@ function stopBreathing() {
   clearTimeout(breathingInterval);
   breathingInterval = null;
 }
+let ripplePendingStop = false;
 function updateBreathing() {
   const ring = $('.timer-ring-container');
-  ring.classList.toggle('running', state.status === 'running');
+  if (state.status === 'running') {
+    ripplePendingStop = false;
+    ring.classList.add('running');
+  } else if (ring.classList.contains('running') && !ripplePendingStop) {
+    ripplePendingStop = true;
+  }
   const active = settings.breathingMode && state.status === 'running' && state.mode !== 'work';
   if (active && !breathingInterval) startBreathing();
   else if (!active && breathingInterval) stopBreathing();
 }
+
+// 波纹周期结束时检查是否需要停止
+$('.timer-ring-container').addEventListener('animationiteration', (e) => {
+  if (e.target.classList.contains('ripple') && ripplePendingStop) {
+    e.target.parentElement.classList.remove('running');
+    ripplePendingStop = false;
+  }
+});
 
 rangeHydration.addEventListener('input', () => {
   settings.hydrationInterval = parseInt(rangeHydration.value);
