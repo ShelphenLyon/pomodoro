@@ -189,6 +189,7 @@
     letter-spacing: 2px;
     font-variant-numeric: tabular-nums;
     font-family: 'Georgia', 'Noto Serif SC', 'Source Han Serif SC', 'STSong', 'SimSun', serif;
+    cursor: pointer;
   }
   .timer-label {
     font-size: 13px;
@@ -609,7 +610,6 @@
   }
   .week-bar {
     width: 100%;
-    max-width: 36px;
     background: var(--accent-work);
     border-radius: 6px 6px 0 0;
     transition: height 0.5s;
@@ -1326,7 +1326,7 @@
     <span class="tab-arrow">▶</span>
     <span class="tab-badge" id="drawerBadge">0</span>
   </button>
-  <div class="drawer-header">📋 今日清单</div>
+  <div class="drawer-header">今日清单</div>
   <div class="drawer-body">
     <div class="drawer-add-row" id="drawerAddRow" style="display:none">
       <div style="flex:1;display:flex;flex-direction:column;">
@@ -1375,19 +1375,19 @@
 
   <!-- 模式切换 -->
   <div class="mode-tabs" id="modeTabs">
-    <button class="mode-tab work active" data-mode="work">🍅 专注</button>
-    <button class="mode-tab short" data-mode="short">☕ 短休</button>
-    <button class="mode-tab long" data-mode="long">🌴 长休</button>
+    <button class="mode-tab work active" data-mode="work">专注</button>
+    <button class="mode-tab short" data-mode="short">短休</button>
+    <button class="mode-tab long" data-mode="long">长休</button>
   </div>
 
   <!-- 正向计时开关 -->
   <div class="countup-row">
-    <span id="countdownLabel" class="countup-label active">⏱ 倒计时</span>
+    <span id="countdownLabel" class="countup-label active">倒计时</span>
     <label class="toggle-switch" title="切换正向计时 / 倒计时">
       <input type="checkbox" id="toggleCountUp">
       <span class="toggle-slider"></span>
     </label>
-    <span id="countupLabel" class="countup-label">🔼 正向计时</span>
+    <span id="countupLabel" class="countup-label">正向计时</span>
   </div>
 
   <!-- 任务输入（移到计时器上方） -->
@@ -2081,11 +2081,10 @@ function timerComplete() {
       startTimer();
     }
   } else {
-    // 休息结束 → 回到工作 → 自动开始
-    showToast('⏰ 休息结束，开始工作吧！');
+    // 休息结束 → 回到工作，不自动开始
+    showToast('休息结束，准备开始工作');
     state.countUp = settings.countUp;
     resetTimerForMode('work');
-    startTimer();
   }
 
   saveData();
@@ -2133,11 +2132,9 @@ function stopCountUp() {
       resetTimerForMode('work');
     }
   } else {
-    showToast(`✅ 休息结束！用时 ${elapsedStr}`);
-    // 回到工作模式，恢复 countUp 偏好
+    showToast(`休息结束！用时 ${elapsedStr}`);
     state.countUp = settings.countUp;
     resetTimerForMode('work');
-    startTimer();
   }
 
   saveData();
@@ -2218,6 +2215,14 @@ function switchMode(mode) {
 btnMain.addEventListener('click', toggleTimer);
 btnReset.addEventListener('click', resetTimer);
 btnSkip.addEventListener('click', skipTimer);
+
+// 点击倒计时数字 → 打开计时设置
+timerTime.addEventListener('click', () => {
+  if (state.status !== 'idle') return;
+  updateRanges();
+  showSettingsPage($('#settingsTimer'));
+  settingsOverlay.classList.add('open');
+});
 
 modeTabs.addEventListener('click', (e) => {
   const tab = e.target.closest('.mode-tab');
@@ -3445,6 +3450,12 @@ function renderDonutChart(entries, selDate) {
 }
 
 function donutPath(cx, cy, r, inner, startAngle, endAngle) {
+  const diff = endAngle - startAngle;
+  // 完整圆需要拆成两个半圆，否则 SVG 无法渲染
+  if (diff >= Math.PI * 2 - 0.001) {
+    const mid = startAngle + Math.PI;
+    return donutPath(cx, cy, r, inner, startAngle, mid) + donutPath(cx, cy, r, inner, mid, endAngle);
+  }
   const x1o = cx + r * Math.cos(startAngle);
   const y1o = cy + r * Math.sin(startAngle);
   const x2o = cx + r * Math.cos(endAngle);
@@ -3453,8 +3464,7 @@ function donutPath(cx, cy, r, inner, startAngle, endAngle) {
   const y1i = cy + inner * Math.sin(endAngle);
   const x2i = cx + inner * Math.cos(startAngle);
   const y2i = cy + inner * Math.sin(startAngle);
-  const large = endAngle - startAngle > Math.PI ? 1 : 0;
-  // 外弧 + 内弧反向
+  const large = diff > Math.PI ? 1 : 0;
   return `M ${x1o} ${y1o} A ${r} ${r} 0 ${large} 1 ${x2o} ${y2o} L ${x1i} ${y1i} A ${inner} ${inner} 0 ${large} 0 ${x2i} ${y2i} Z`;
 }
 
