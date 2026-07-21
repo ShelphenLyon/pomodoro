@@ -739,7 +739,8 @@
     text-align: right;
     padding-right: 2px;
     pointer-events: none;
-    z-index: 1;
+    z-index: 10;
+    transition: none;
   }
   .hourly-chart::-webkit-scrollbar { height: 2px; }
   .hourly-chart::-webkit-scrollbar-thumb { background: #333; border-radius: 1px; }
@@ -786,7 +787,6 @@
     color: var(--text);
     margin-bottom: 2px;
     opacity: 0;
-    transition: opacity 0.15s;
   }
   .hourly-bar-col:hover .hourly-bar-time { opacity: 1; }
 
