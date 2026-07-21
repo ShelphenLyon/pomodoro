@@ -353,17 +353,18 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-  .settings-menu-item:hover { background: #1a2a45; }
+  .settings-menu-item:hover { background: var(--accent-work); color: #fff; }
+  .settings-menu-item:hover .menu-arrow { color: #fff; }
   .menu-arrow { font-size: 18px; color: var(--text-secondary); }
   .settings-back {
     font-size: 14px;
     font-weight: 600;
-    color: var(--accent-work);
+    color: var(--text);
     cursor: pointer;
     padding: 4px 0 16px;
     transition: color 0.2s;
   }
-  .settings-back:hover { color: var(--text); }
+  .settings-back:hover { color: var(--accent-work); }
   .settings-divider {
     height: 1px;
     background: #2a3a5a;
@@ -593,15 +594,24 @@
   }
 
   /* 7 天柱状图 */
+  .line-chart {
+    width: 100%;
+    height: 140px;
+    margin-top: 4px;
+  }
+  .point-label { opacity: 0; transition: opacity 0.15s; }
+  .line-point:hover .point-label { opacity: 1; }
+  .line-point:hover circle:nth-child(2) { r: 7; }
   .week-chart {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 1px;
     height: 120px;
     padding-top: 4px;
   }
   .week-bar-col {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -715,9 +725,21 @@
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    height: 72px;
+    height: 100px;
     padding: 4px 0;
     overflow-x: auto;
+  }
+  .hourly-ref-line {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    border-top: 1px dashed var(--accent-work);
+    font-size: 8px;
+    color: var(--accent-work);
+    text-align: right;
+    padding-right: 2px;
+    pointer-events: none;
+    z-index: 1;
   }
   .hourly-chart::-webkit-scrollbar { height: 2px; }
   .hourly-chart::-webkit-scrollbar-thumb { background: #333; border-radius: 1px; }
@@ -753,15 +775,20 @@
   }
   .hourly-bar-label {
     font-size: 9px;
-    color: var(--text-secondary);
+    font-weight: 600;
+    color: var(--text);
     margin-top: 4px;
     white-space: nowrap;
   }
   .hourly-bar-time {
-    font-size: 8px;
-    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
   }
+  .hourly-bar-col:hover .hourly-bar-time { opacity: 1; }
 
   /* 专注记录折叠开关 */
   .session-toggle {
@@ -2561,22 +2588,22 @@ if (settings.hydrationVideoName) {
 // 主题切换
 // ═══════════════════════════════════════════
 const THEMES = {
-  red:    { work: '#e74c3c', short: '#2ecc71', long: '#3498db', up: '#f39c12',
+  red:    { work: '#e74c3c', short: '#e88c8c', long: '#e88c8c', up: '#f39c12',
             bg: '#1a1a2e', card: '#16213e', ringBg: '#1e2d4a', input: '#0f1a30', btnBg: '#0f3460', btnHover: '#1a4a7a',
             text: '#e0e0e0', textSec: '#a0a0b8', tabBar: '#0d1b33', tabInactive: '#a0a0b8' },
-  sky:    { work: '#3498db', short: '#2ecc71', long: '#e74c3c', up: '#2980b9',
+  sky:    { work: '#3498db', short: '#8ec8f0', long: '#8ec8f0', up: '#2980b9',
             bg: '#dceefb', card: '#e3f0fa', ringBg: '#c8dff2', input: '#ecf4fc', btnBg: '#d4e6f5', btnHover: '#bed8f0',
             text: '#1a2538', textSec: '#5a6a6b', tabBar: '#c8d8e8', tabInactive: '#7f8c8d' },
-  mint:   { work: '#27ae60', short: '#f39c12', long: '#3498db', up: '#2ecc71',
+  mint:   { work: '#27ae60', short: '#7ed09a', long: '#7ed09a', up: '#2ecc71',
             bg: '#d5f0df', card: '#ddf3e6', ringBg: '#c0e8d0', input: '#e8f7ed', btnBg: '#ceecda', btnHover: '#b8e0c8',
             text: '#1a2538', textSec: '#5a6a6b', tabBar: '#b8d8c4', tabInactive: '#6b8b7b' },
-  cream:  { work: '#e67e22', short: '#2ecc71', long: '#3498db', up: '#f39c12',
+  cream:  { work: '#e67e22', short: '#edb078', long: '#edb078', up: '#f39c12',
             bg: '#fdf0dc', card: '#fef5e8', ringBg: '#f5e4c8', input: '#fef8ef', btnBg: '#f8e8d0', btnHover: '#f0d8b8',
             text: '#2d1f15', textSec: '#6a5248', tabBar: '#e8d5b8', tabInactive: '#8c7b6b' },
-  lavender:{ work: '#9b59b6', short: '#2ecc71', long: '#3498db', up: '#8e44ad',
+  lavender:{ work: '#9b59b6', short: '#be98d4', long: '#be98d4', up: '#8e44ad',
             bg: '#e8dcf2', card: '#efe5f5', ringBg: '#dcc8e8', input: '#f2ecf7', btnBg: '#e4d4ef', btnHover: '#d4c0e5',
             text: '#251a30', textSec: '#6a5a7a', tabBar: '#d4c4e0', tabInactive: '#7b6b8c' },
-  rose:   { work: '#e91e63', short: '#2ecc71', long: '#3498db', up: '#ec407a',
+  rose:   { work: '#e91e63', short: '#f090a8', long: '#f090a8', up: '#ec407a',
             bg: '#fce4ec', card: '#fdeaef', ringBg: '#f8d0dc', input: '#fef0f4', btnBg: '#fadce4', btnHover: '#f4c8d4',
             text: '#2d1822', textSec: '#7a5a68', tabBar: '#e8ccd4', tabInactive: '#8b6b7b' },
 };
@@ -2992,9 +3019,10 @@ function getChartData(mode, offset) {
       const ds = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const totalSec = stats.sessionHistory.filter(s => s.date === ds).reduce((s, r) => s + r.duration, 0);
       const isToday = ds === todayStr;
+      const showLabel = (i - 1) % 5 === 0 || i === daysInMonth;
       result.push({
         date: ds,
-        label: i === 1 || i % 5 === 0 ? `${i}` : '',
+        label: showLabel ? `${i}` : '',
         totalSec, isToday,
       });
     }
@@ -3171,10 +3199,11 @@ function renderStats() {
   }
   const maxHourly = Math.max(...hourlyData.map(d => d.sessions.reduce((s, r) => s + r.duration, 0)), 1);
   html += `<div class="stats-section"><h4>任务时段分布</h4>
-    <div class="hourly-chart">`;
+    <div class="hourly-chart" style="position:relative">`;
+  html += `<div class="hourly-ref-line">60m</div>`;
   hourlyData.forEach(d => {
     const totalSec = d.sessions.reduce((s, r) => s + r.duration, 0);
-    const barH = maxHourly > 0 ? Math.max(Math.round((totalSec / maxHourly) * 60), totalSec > 0 ? 2 : 0) : 0;
+    const barH = Math.max(Math.round((totalSec / 3600) * 100), totalSec > 0 ? 2 : 0);
     html += `<div class="hourly-bar-col" title="${d.hour}:00 - ${formatDurationShort(totalSec)}">
       <span class="hourly-bar-time">${totalSec > 0 ? formatDurationShort(totalSec) : ''}</span>
       <div class="hourly-bar bar-stack" style="height:${barH}%">${renderBarSegments(d.sessions, taskColorMap)}</div>
@@ -3205,26 +3234,47 @@ function renderStats() {
         <button class="chart-mode-btn${chartMode === 'year' ? ' active' : ''}" data-mode="year">年</button>
       </div>
     </div>
-    <div class="week-chart" id="weekChart">`;
-  chartData.forEach(d => {
-    const totalSec = d.totalSec;
-    const h = totalSec > 0 ? Math.max(Math.round((totalSec / maxSec) * 100), 2) : 0;
-    const isSel = d.date === selDate || (chartMode === 'year' && selDate && selDate.startsWith(d.date));
-    // 取该日期/月的 sessions 用于分段
-    let bucketSessions;
-    if (chartMode === 'year') {
-      bucketSessions = stats.sessionHistory.filter(s => s.date.startsWith(d.date));
-    } else {
-      bucketSessions = stats.sessionHistory.filter(s => s.date === d.date);
-    }
-    const segments = renderBarSegments(bucketSessions, taskColorMap);
-    html += `<div class="week-bar-col" data-date="${d.date}" style="cursor:pointer" title="${d.date}">
-      <span class="week-bar-time">${totalSec > 0 ? formatDurationShort(totalSec) : ''}</span>
-      <div class="week-bar bar-stack${isSel ? ' today' : ''}" style="height:${Math.max(h, totalSec > 0 ? 2 : 0)}%">${segments}</div>
-      <span class="week-bar-label">${chartMode === 'month' ? (d.label || '') : d.label}</span>
-    </div>`;
+    <svg class="line-chart" id="weekChart" viewBox="0 0 380 130">`;
+  const svgMax = Math.max(...chartData.map(d => d.totalSec), 1);
+  const w = 380, h = 130, l = 38, r = 15, t = 20, b = 22;
+  const pw = (w - l - r) / Math.max(chartData.length - 1, 1);
+  // 总量折线
+  const pts = chartData.map((d, i) => {
+    const x = l + i * pw;
+    const y = h - b - (d.totalSec / svgMax) * (h - b - t);
+    return `${x},${y}`;
+  }).join(' ');
+  // 点击区域（底层）
+  chartData.forEach((d, i) => {
+    const x = l + i * pw - pw / 2;
+    html += `<rect x="${x}" y="${t}" width="${pw}" height="${h - b - t}" fill="transparent" data-date="${d.date}" style="cursor:pointer"/>`;
   });
-  html += `</div></div>`;
+  html += `<polyline points="${pts}" fill="none" stroke="var(--accent-work)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // 左侧时间刻度
+  [0, 0.25, 0.5, 0.75, 1].forEach(ratio => {
+    const sec = Math.round(svgMax * ratio);
+    const y = h - b - ratio * (h - b - t);
+    html += `<text x="${l - 4}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--text)">${formatDurationShort(sec)}</text>`;
+  });
+  // 数据点（悬浮显示时长，最顶层）
+  chartData.forEach((d, i) => {
+    if (d.totalSec > 0) {
+      const x = l + i * pw;
+      const y = h - b - (d.totalSec / svgMax) * (h - b - t);
+      html += `<g class="line-point">
+        <circle cx="${x}" cy="${y}" r="14" fill="transparent" stroke="none" style="pointer-events:all"/>
+        <circle cx="${x}" cy="${y}" r="5" fill="var(--accent-work)" stroke="var(--card-bg)" stroke-width="2"/>
+        <text class="point-label" x="${x}" y="${y - 8}" text-anchor="middle" font-size="10" fill="var(--text)" font-weight="600">${formatDurationShort(d.totalSec)}</text>
+      </g>`;
+    }
+  });
+  // X 轴标签
+  chartData.forEach((d, i) => {
+    if (chartMode === 'month' && d.label === '') return;
+    const x = l + i * pw;
+    html += `<text x="${x}" y="${h - 6}" text-anchor="middle" font-size="10" fill="var(--text)">${d.label}</text>`;
+  });
+  html += `</svg></div></div>`;
 
   // ── 累计 ──
   html += `<div class="stats-section"><h4>累计统计</h4>
@@ -3265,13 +3315,12 @@ function renderStats() {
   // 柱状图点击
   const weekChart = document.getElementById('weekChart');
   if (weekChart) {
-    weekChart.querySelectorAll('.week-bar-col').forEach(col => {
-      col.addEventListener('click', () => {
-        statsDate = col.dataset.date;
+    weekChart.querySelectorAll('rect[data-date]').forEach(r => {
+      r.addEventListener('click', () => {
+        statsDate = r.dataset.date;
         if (chartMode === 'year') {
-          // 年模式：点击月份 → 切换到该月的月视图
           chartMode = 'month';
-          const [y, m] = col.dataset.date.split('-');
+          const [y, m] = r.dataset.date.split('-');
           const today = new Date();
           chartOffset = (parseInt(y) - today.getFullYear()) * 12 + (parseInt(m) - 1 - today.getMonth());
         }
@@ -3414,7 +3463,7 @@ function renderDonutChart(entries, selDate) {
           const ly = DONUT_CY + (OUTER_R + 8) * Math.sin(midA);
           const anchor = midA > Math.PI / 2 && midA < Math.PI * 3 / 2 ? 'end' : 'start';
           return `<path class="donut-outer-ring" d="${donutPath(DONUT_CX, DONUT_CY, OUTER_R, OUTER_INNER, cs, ce)}" fill="${childColors[ci % childColors.length]}"><title>${escapeHtml(c.name)}: ${formatDuration(c.totalSeconds)}</title></path>
-            <text class="donut-outer-label" x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="9" fill="var(--text)">${escapeHtml(c.name)}</text>`;
+            <text class="donut-outer-label" x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="11" fill="var(--text)">${escapeHtml(c.name)}</text>`;
         }).join('');
       }
     }
