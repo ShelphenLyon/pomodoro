@@ -631,7 +631,7 @@
   }
   .point-label { opacity: 0; transition: opacity 0.15s; }
   .line-point:hover .point-label { opacity: 1; }
-  .line-point:hover circle:nth-child(2) { r: 7; }
+  .line-point:hover circle { r: 7; }
   .week-chart {
     display: flex;
     align-items: flex-end;
@@ -704,7 +704,7 @@
   .donut-legend {
     display: flex; flex-wrap: wrap; justify-content: center;
     gap: 6px 14px;
-    margin-top: 10px;
+    margin-bottom: 2px;
   }
   .donut-legend-item {
     display: flex; align-items: center; gap: 5px;
@@ -751,17 +751,13 @@
   }
 
   /* 每小时柱形图 */
-  .hourly-chart {
-    display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 100px;
-    padding: 4px 0;
-    overflow-x: auto;
+  .hourly-chart-svg {
+    width: 100%;
+    height: 140px;
   }
   .hourly-ref-line {
     position: absolute;
-    top: 0;
+    top: 4px;
     left: 0; right: 0;
     border-top: 1px dashed var(--accent-work);
     font-size: 8px;
@@ -771,54 +767,17 @@
     pointer-events: none;
     z-index: 10;
   }
-  .hourly-chart::-webkit-scrollbar { height: 2px; }
-  .hourly-chart::-webkit-scrollbar-thumb { background: #333; border-radius: 1px; }
-  .hourly-bar-col {
-    flex: 1;
-    min-width: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100%;
-    justify-content: flex-end;
+  .hourly-mode-toggle {
+    font-size: 11px;
+    font-weight: 400;
+    margin-left: 8px;
   }
-  .hourly-bar {
-    width: 100%;
-    background: var(--accent-up);
-    border-radius: 3px 3px 0 0;
-    transition: height 0.4s;
-    opacity: 0.8;
-    min-height: 0;
-  }
-  .bar-stack {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    border-radius: 3px 3px 0 0;
-    overflow: hidden;
-    background: transparent !important;
-  }
-  .bar-stack > div {
-    width: 100%;
-    min-height: 2px;
-    transition: height 0.4s;
-  }
-  .hourly-bar-label {
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--text);
-    margin-top: 4px;
-    white-space: nowrap;
-  }
-  .hourly-bar-time {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 2px;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-  .hourly-bar-col:hover .hourly-bar-time { opacity: 1; }
+  .hm-opt { color: var(--text-secondary); cursor: pointer; }
+  .hm-opt:hover { color: var(--text); }
+  .hm-opt.active { color: var(--accent-work); font-weight: 600; }
+  .hm-sep { color: var(--text-secondary); margin: 0 2px; }
+  .hourly-hover-label { opacity: 0; transition: opacity 0.15s; }
+  .hourly-group:hover .hourly-hover-label { opacity: 1; }
 
   /* 专注记录折叠开关 */
   .session-toggle {
@@ -3286,43 +3245,94 @@ function renderStats() {
     return taskColorMap[name];
   }
 
-  // ── 每小时学习量（按实际占用时长分配）──
-  const hourlyData = [];
-  for (let h = 0; h < 24; h++) hourlyData.push({ hour: h, sessions: [] });
-  selSessions.forEach(s => {
-    const start = new Date(s.timestamp);
-    const totalMin = s.duration / 60;
-    let remaining = totalMin;
-    let h = start.getHours();
-    // 第一个小时：剩余分钟数
-    const firstMin = Math.min(60 - start.getMinutes(), remaining);
-    if (firstMin > 0) {
-      hourlyData[h].sessions.push({ task: s.task, duration: Math.round(firstMin * 60) });
-      remaining -= firstMin;
-    }
-    // 后续完整小时
-    h++;
-    while (remaining > 0 && h < 24) {
-      const chunk = Math.min(60, remaining);
-      hourlyData[h].sessions.push({ task: s.task, duration: Math.round(chunk * 60) });
-      remaining -= chunk;
+  // ── 任务时段分布（每日/全部切换）──
+  if (!window._hourlyAllMode) window._hourlyAllMode = false;
+  const hourlyAllMode = window._hourlyAllMode;
+  function buildHourly(sessions) {
+    const data = [];
+    for (let h = 0; h < 24; h++) data.push({ hour: h, sessions: [] });
+    sessions.forEach(s => {
+      const start = new Date(s.timestamp);
+      const totalMin = s.duration / 60;
+      let remaining = totalMin;
+      let h = start.getHours();
+      const firstMin = Math.min(60 - start.getMinutes(), remaining);
+      if (firstMin > 0) {
+        data[h].sessions.push({ task: s.task, duration: Math.round(firstMin * 60) });
+        remaining -= firstMin;
+      }
       h++;
+      while (remaining > 0 && h < 24) {
+        const chunk = Math.min(60, remaining);
+        data[h].sessions.push({ task: s.task, duration: Math.round(chunk * 60) });
+        remaining -= chunk;
+        h++;
+      }
+    });
+    return data;
+  }
+  const allSessions = stats.sessionHistory;
+  const hourlyDaily = buildHourly(selSessions);
+  const hourlyAll = buildHourly(allSessions);
+  const hourlyData = hourlyAllMode ? hourlyAll : hourlyDaily;
+  const maxHourly = Math.max(...hourlyData.map(d => d.sessions.reduce((s, r) => s + r.duration, 0)), 1);
+  const refSec = hourlyAllMode ? maxHourly : 3600;
+  const refLabel = hourlyAllMode ? formatDurationShort(maxHourly) : '60m';
+  html += `<div class="stats-section"><h4>任务时段分布 <span class="hourly-mode-toggle"><span class="hm-opt${!hourlyAllMode ? ' active' : ''}" data-hm="day">今日</span><span class="hm-sep">/</span><span class="hm-opt${hourlyAllMode ? ' active' : ''}" data-hm="all">全部</span></span></h4>
+    <svg class="hourly-chart-svg" viewBox="0 0 380 140">`;
+  // Y轴刻度
+  html += `<text x="0" y="10" font-size="10" fill="var(--text)">${refLabel}</text>`;
+  html += `<line x1="30" y1="8" x2="380" y2="8" stroke="var(--accent-work)" stroke-width="1" stroke-dasharray="4,3"/>`;
+  // 柱形（放在两个刻度之间）
+  const barW = Math.max((380 - 30) / 24 - 1, 6);
+  const barGap = 1;
+  hourlyData.forEach((d, i) => {
+    const totalSec = d.sessions.reduce((s, r) => s + r.duration, 0);
+    const barH = totalSec > 0 ? Math.max((totalSec / refSec) * 112, 2) : 0;
+    const bx = 30 + i * (barW + barGap) + barGap;
+    const by = 120 - barH;
+    const labelX = bx + barW / 2;
+    if (totalSec === 0) {
+      html += `<g class="hourly-group"></g>`;
+      return;
+    }
+    const r = Math.min(3, barW / 2, barH / 2);
+    if (hourlyAllMode) {
+      // 全部模式：单一主题色
+      const pathD = `M${bx} ${120} L${bx} ${by + r} Q${bx} ${by} ${bx + r} ${by} L${bx + barW - r} ${by} Q${bx + barW} ${by} ${bx + barW} ${by + r} L${bx + barW} ${120} Z`;
+      html += `<g class="hourly-group">
+        <path d="${pathD}" fill="var(--accent-work)" opacity="0.8"/>
+        <text class="hourly-hover-label" x="${labelX}" y="${by - 4}" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text)">${formatDurationShort(totalSec)}</text>
+      </g>`;
+    } else {
+      // 今日模式：按任务分段着色
+      const groups = {};
+      d.sessions.forEach(s => {
+        const p = getParentName(s.task);
+        groups[p] = (groups[p] || 0) + s.duration;
+      });
+      let segs = '';
+      let cy = by;
+      Object.entries(groups).sort((a, b) => b[1] - a[1]).forEach(([name, sec]) => {
+        const ch = Math.max((sec / totalSec) * barH, 1);
+        const c = taskColorMap[name] || '#555';
+        const sr = Math.min(2, barW / 2, ch / 2);
+        const d = `M${bx} ${cy + ch} L${bx} ${cy + sr} Q${bx} ${cy} ${bx + sr} ${cy} L${bx + barW - sr} ${cy} Q${bx + barW} ${cy} ${bx + barW} ${cy + sr} L${bx + barW} ${cy + ch} Z`;
+        segs += `<path d="${d}" fill="${c}"/>`;
+        cy += ch;
+      });
+      html += `<g class="hourly-group">
+        ${segs}
+        <text class="hourly-hover-label" x="${labelX}" y="${by - 4}" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text)">${formatDurationShort(totalSec)}</text>
+      </g>`;
     }
   });
-  const maxHourly = Math.max(...hourlyData.map(d => d.sessions.reduce((s, r) => s + r.duration, 0)), 1);
-  html += `<div class="stats-section"><h4>任务时段分布</h4>
-    <div class="hourly-chart" style="position:relative">`;
-  html += `<div class="hourly-ref-line">60m</div>`;
-  hourlyData.forEach(d => {
-    const totalSec = d.sessions.reduce((s, r) => s + r.duration, 0);
-    const barH = Math.max(Math.round((totalSec / 3600) * 100), totalSec > 0 ? 2 : 0);
-    html += `<div class="hourly-bar-col" title="${d.hour}:00 - ${formatDurationShort(totalSec)}">
-      <span class="hourly-bar-time">${totalSec > 0 ? formatDurationShort(totalSec) : ''}</span>
-      <div class="hourly-bar bar-stack" style="height:${barH}%">${renderBarSegments(d.sessions, taskColorMap)}</div>
-      <span class="hourly-bar-label">${d.hour}</span>
-    </div>`;
-  });
-  html += `</div></div>`;
+  // X轴标签（对齐小时刻度线）
+  for (let h = 0; h < 24; h++) {
+    const x = 30 + h * (barW + barGap);
+    html += `<text x="${x}" y="132" text-anchor="middle" font-size="10" fill="var(--text)">${h}</text>`;
+  }
+  html += `</svg></div>`;
 
   // ── 当日任务占比（环形图）──
   html += `<div class="stats-section"><h4>${selDate === today ? '今日' : selDate} 任务占比</h4>`;
@@ -3356,11 +3366,6 @@ function renderStats() {
     const y = h - b - (d.totalSec / svgMax) * (h - b - t);
     return `${x},${y}`;
   }).join(' ');
-  // 点击区域（底层）
-  chartData.forEach((d, i) => {
-    const x = l + i * pw - pw / 2;
-    html += `<rect x="${x}" y="${t}" width="${pw}" height="${h - b - t}" fill="transparent" data-date="${d.date}" style="cursor:pointer"/>`;
-  });
   html += `<polyline points="${pts}" fill="none" stroke="var(--accent-work)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
   // 左侧时间刻度
   [0, 0.25, 0.5, 0.75, 1].forEach(ratio => {
@@ -3368,17 +3373,21 @@ function renderStats() {
     const y = h - b - ratio * (h - b - t);
     html += `<text x="${l - 4}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--text)">${formatDurationShort(sec)}</text>`;
   });
-  // 数据点（悬浮显示时长，最顶层）
+  // 数据点+悬停标签（rect触发显示）
   chartData.forEach((d, i) => {
-    if (d.totalSec > 0) {
-      const x = l + i * pw;
-      const y = h - b - (d.totalSec / svgMax) * (h - b - t);
-      html += `<g class="line-point">
-        <circle cx="${x}" cy="${y}" r="14" fill="transparent" stroke="none" style="pointer-events:all"/>
-        <circle cx="${x}" cy="${y}" r="5" fill="var(--accent-work)" stroke="var(--card-bg)" stroke-width="2"/>
-        <text class="point-label" x="${x}" y="${y - 8}" text-anchor="middle" font-size="10" fill="var(--text)" font-weight="600">${formatDurationShort(d.totalSec)}</text>
-      </g>`;
+    if (d.totalSec === 0) {
+      const x = l + i * pw - pw / 2;
+      html += `<rect x="${x}" y="${t}" width="${pw}" height="${h - b - t}" fill="transparent" data-date="${d.date}" style="cursor:pointer"><title>${d.date}</title></rect>`;
+      return;
     }
+    const x = l + i * pw;
+    const y = h - b - (d.totalSec / svgMax) * (h - b - t);
+    const rx = l + i * pw - pw / 2;
+    html += `<g class="line-point">
+      <rect x="${rx}" y="${t}" width="${pw}" height="${h - b - t}" fill="transparent" data-date="${d.date}" style="cursor:pointer"><title>${d.date} ${formatDurationShort(d.totalSec)}</title></rect>
+      <circle cx="${x}" cy="${y}" r="5" fill="var(--accent-work)" stroke="var(--card-bg)" stroke-width="2" style="pointer-events:none"/>
+      <text class="point-label" x="${x}" y="${y - 8}" text-anchor="middle" font-size="10" fill="var(--text)" font-weight="600">${formatDurationShort(d.totalSec)}</text>
+    </g>`;
   });
   // X 轴标签
   chartData.forEach((d, i) => {
@@ -3415,6 +3424,14 @@ function renderStats() {
       toggle.querySelector('.session-arrow').textContent = isOpen ? '▶' : '▼';
     });
   }
+
+  // 任务时段分布 今日/全部 切换
+  statsContent.querySelectorAll('.hm-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      window._hourlyAllMode = opt.dataset.hm === 'all';
+      renderStats();
+    });
+  });
 
   // 日期芯片点击
   statsContent.querySelectorAll('.date-chip').forEach(chip => {
@@ -3585,6 +3602,14 @@ function renderDonutChart(entries, selDate) {
   });
 
   const html = `<div class="donut-wrap">
+    <div class="donut-legend">
+      ${slices.map((s, i) => `
+        <div class="donut-legend-item">
+          <span class="donut-legend-dot" style="background:${s.color}"></span>
+          ${escapeHtml(s.name)} ${formatDurationShort(s.val)}
+        </div>
+      `).join('')}
+    </div>
     <svg class="donut-svg" viewBox="-25 -25 250 250">
       ${slices.map((s, i) => `
         <g class="donut-group">
@@ -3597,14 +3622,6 @@ function renderDonutChart(entries, selDate) {
       <text class="donut-center-text" x="${DONUT_CX}" y="${DONUT_CY - 4}">${escapeHtml(title)}</text>
       <text class="donut-center-val" x="${DONUT_CX}" y="${DONUT_CY + 18}">${formatDurationShort(total)}</text>
     </svg>
-    <div class="donut-legend">
-      ${slices.map((s, i) => `
-        <div class="donut-legend-item">
-          <span class="donut-legend-dot" style="background:${s.color}"></span>
-          ${escapeHtml(s.name)} ${formatDurationShort(s.val)}
-        </div>
-      `).join('')}
-    </div>
   </div>`;
 
   container.innerHTML = html;
