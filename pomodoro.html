@@ -1861,7 +1861,7 @@ function updateTimerDisplay() {
     const offset = CIRCUMFERENCE * (1 - progress);
     ringProgress.style.strokeDasharray = `${CIRCUMFERENCE}`;
     ringProgress.style.strokeDashoffset = offset;
-    ringProgress.style.stroke = state.mode === 'work' ? 'var(--accent-up)' : MODES[state.mode].accent;
+    ringProgress.style.stroke = MODES[state.mode].accent;
   } else {
     timerTime.textContent = formatTime(state.remaining);
     const progress = state.remaining / state.total;
