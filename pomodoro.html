@@ -829,9 +829,10 @@
   }
   .session-time {
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: 11px;
     font-family: 'SF Mono', 'Consolas', monospace;
-    min-width: 42px;
+    min-width: 90px;
+    text-align: center;
   }
   .session-dur {
     color: var(--accent-up);
@@ -3073,7 +3074,7 @@ function getChartData(mode, offset) {
       const ds = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const totalSec = stats.sessionHistory.filter(s => s.date === ds).reduce((s, r) => s + r.duration, 0);
       const isToday = ds === todayStr;
-      const showLabel = (i - 1) % 5 === 0 || i === daysInMonth;
+      const showLabel = (i - 1) % 5 === 0 || i === daysInMonth || isToday;
       result.push({
         date: ds,
         label: showLabel ? `${i}` : '',
@@ -3204,8 +3205,10 @@ function renderStats() {
   } else {
     html += `<div class="session-list">`;
     selSessions.forEach(s => {
-      const t = new Date(s.timestamp);
-      const timeStr = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+      const end = new Date(s.timestamp);
+      const start = new Date(end.getTime() - s.duration * 1000);
+      const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const timeStr = `${fmt(start)} - ${fmt(end)}`;
       html += `<div class="session-row">
         <span class="session-task">${escapeHtml(s.task || '未命名')}</span>
         <span class="session-time">${timeStr}</span>
@@ -3332,7 +3335,8 @@ function renderStats() {
   // X轴标签（对齐小时刻度线）
   for (let h = 0; h < 24; h++) {
     const x = 30 + h * (barW + barGap);
-    html += `<text x="${x}" y="132" text-anchor="middle" font-size="10" fill="var(--text)">${h}</text>`;
+    const isNow = h === new Date().getHours();
+    html += `<text x="${x}" y="132" text-anchor="middle" font-size="10" font-weight="${isNow ? '700' : '400'}" fill="${isNow ? 'var(--accent-work)' : 'var(--text)'}">${h}</text>`;
   }
   html += `</svg></div>`;
 
@@ -3387,7 +3391,7 @@ function renderStats() {
     const rx = l + i * pw - pw / 2;
     html += `<g class="line-point">
       <rect x="${rx}" y="${t}" width="${pw}" height="${h - b - t}" fill="transparent" data-date="${d.date}" style="cursor:pointer"><title>${d.date} ${formatDurationShort(d.totalSec)}</title></rect>
-      <circle cx="${x}" cy="${y}" r="5" fill="var(--accent-work)" stroke="var(--card-bg)" stroke-width="2" style="pointer-events:none"/>
+      <circle cx="${x}" cy="${y}" r="${d.isToday ? 7 : 5}" fill="var(--accent-work)" stroke="var(--card-bg)" stroke-width="2" style="pointer-events:none"/>
       <text class="point-label" x="${x}" y="${y - 8}" text-anchor="middle" font-size="10" fill="var(--text)" font-weight="600">${formatDurationShort(d.totalSec)}</text>
     </g>`;
   });
@@ -3395,7 +3399,7 @@ function renderStats() {
   chartData.forEach((d, i) => {
     if (chartMode === 'month' && d.label === '') return;
     const x = l + i * pw;
-    html += `<text x="${x}" y="${h - 6}" text-anchor="middle" font-size="10" fill="var(--text)">${d.label}</text>`;
+    html += `<text x="${x}" y="${h - 6}" text-anchor="middle" font-size="10" font-weight="${d.isToday ? '700' : '400'}" fill="${d.isToday ? 'var(--accent-work)' : 'var(--text)'}">${d.label}</text>`;
   });
   html += `</svg></div></div>`;
 
