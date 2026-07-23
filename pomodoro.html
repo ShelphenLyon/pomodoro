@@ -261,6 +261,9 @@
   .btn-main.countup-stop { background: #e74c3c; box-shadow: 0 4px 20px rgba(231,76,60,0.5); }
   .btn-main:hover  { filter: brightness(1.15); transform: scale(1.06); }
   .btn-main:active { transform: scale(0.94); }
+  .btn-ring { position:absolute; top:-10px; left:-10px; width:calc(100% + 20px); height:calc(100% + 20px); pointer-events:none; z-index:5; }
+  .btn-ring circle { transition: stroke-dashoffset 0.3s ease-out; filter: drop-shadow(0 0 3px rgba(0,0,0,0.4)); }
+  .btn-main { overflow: visible; }
 
   .btn-secondary {
     width: 44px; height: 44px;
@@ -491,6 +494,29 @@
     color: #555;
     letter-spacing: 0.5px;
   }
+  .confirm-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); border-radius: 24px;
+    display: none; align-items: center; justify-content: center;
+    z-index: 20;
+  }
+  .confirm-overlay.show { display: flex; }
+  .confirm-box {
+    background: var(--card-bg);
+    border-radius: 16px; padding: 24px 20px 16px;
+    text-align: center; width: 280px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .confirm-msg { font-size: 14px; color: var(--text); line-height: 1.6; }
+  .confirm-msg small { font-size: 12px; color: var(--text-secondary); }
+  .confirm-btns { display: flex; gap: 12px; margin-top: 18px; }
+  .confirm-btn {
+    flex: 1; padding: 10px 0; border: none; border-radius: 20px;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: filter 0.2s;
+  }
+  .confirm-btn:hover { filter: brightness(1.15); }
+  .confirm-no { background: var(--input-bg); color: var(--text); }
+  .confirm-yes { background: var(--accent-work); color: #fff; }
 
   /* ── Toast ── */
   .toast {
@@ -1430,6 +1456,7 @@
   <div class="controls">
     <button class="btn btn-secondary" id="btnReset" title="重置 (R)">↺</button>
     <button class="btn btn-main work" id="btnMain" title="开始 / 暂停 (空格)">
+      <svg class="btn-ring" viewBox="0 0 72 72"><circle cx="36" cy="36" r="31" fill="none" stroke="var(--accent-work)" stroke-width="5" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="194.8" transform="rotate(-90 36 36)"/></svg>
       <span id="btnIcon">▶</span>
     </button>
     <button class="btn btn-secondary" id="btnSkip" title="跳过 (S)">⏭</button>
@@ -1451,7 +1478,16 @@
   </div>
 
   <!-- 快捷键提示 -->
-  <div class="hint" id="hintText">空格 暂停 · R 重置 · 长按 结束</div>
+  <div class="hint" id="hintText">点击暂停 · 长按终止</div>
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <div class="confirm-msg">是否结束倒计时并提前完成任务？<br><small>低于3分钟不记录时长</small></div>
+      <div class="confirm-btns">
+        <button class="confirm-btn confirm-no" id="confirmNo">取消</button>
+        <button class="confirm-btn confirm-yes" id="confirmYes">确定</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 统计面板 -->
@@ -1928,11 +1964,11 @@ function updateCountUpUI() {
   if (state.countUp) {
     cl.classList.remove('active');
     ul.classList.add('active');
-    hintText.textContent = '空格 暂停 · R 重置 · 长按 结束';
+    hintText.textContent = '点击暂停 · 长按终止';
   } else {
     cl.classList.add('active');
     ul.classList.remove('active');
-    hintText.textContent = '空格 开始/暂停 · R 重置 · S 跳过';
+    hintText.textContent = '点击暂停 · 长按终止';
   }
 }
 
@@ -2232,35 +2268,80 @@ function switchMode(mode) {
 btnReset.addEventListener('click', resetTimer);
 btnSkip.addEventListener('click', skipTimer);
 
-// 长按结束保存，短按暂停
+// 长按结束保存，短按暂停（环形进度指示）
 let _pressTimer = null, _longFired = false, _wasIdle = false;
+const _ring = document.querySelector('.btn-ring circle');
 function _stopSave() {
-  if (state.countUp) { stopCountUp(); return; }
+  if (state.countUp) {
+    stopCountUp();
+    _ring.style.transition = 'none';
+    _ring.setAttribute('stroke-dashoffset', '194.8');
+    return;
+  }
+  // 倒计时休息模式：直接结束
+  if (state.mode !== 'work') {
+    clearInterval(timerInterval); timerInterval = null; timerEndTime = null;
+    state._elapsedStart = null; state._pausedElapsed = 0; state.status = 'idle';
+    playAlert(); document.title = '🍅 番茄钟'; showToast('休息已结束');
+    resetTimerForMode(state.mode);
+    _ring.style.transition = 'none';
+    _ring.setAttribute('stroke-dashoffset', '194.8');
+    return;
+  }
+  // 倒计时专注模式：自定义确认弹窗
   const elapsed = state.total - state.remaining;
+  // 暂停计时
   clearInterval(timerInterval); timerInterval = null; timerEndTime = null;
-  state._elapsedStart = null; state._pausedElapsed = 0; state.status = 'idle';
-  playAlert(); document.title = '🍅 番茄钟';
-  if (state.mode === 'work' && elapsed >= 180) {
-    state.pomodoros++; stats.today++; stats.total++;
-    recordSession(elapsed); saveData(); renderTodo();
-    showToast(`已结束 用时${formatTime(elapsed)}`);
-  } else if (state.mode === 'work') showToast('不足3分钟，未记录');
-  else showToast('休息已结束');
-  resetTimerForMode(state.mode);
+  updateBtnMain();
+  const overlay = document.getElementById('confirmOverlay');
+  overlay.classList.add('show');
+  function doStop() {
+    state._elapsedStart = null; state._pausedElapsed = 0; state.status = 'idle';
+    playAlert(); document.title = '🍅 番茄钟';
+    if (elapsed >= 180) {
+      state.pomodoros++; stats.today++; stats.total++;
+      recordSession(elapsed); saveData(); renderTodo();
+      showToast(`已结束 用时${formatTime(elapsed)}`);
+      if (state.pomodoros >= 4) { state.pomodoros = 0; resetTimerForMode('long'); startTimer(); }
+      else { resetTimerForMode('short'); startTimer(); }
+    } else {
+      showToast('不足3分钟，未记录');
+      resetTimerForMode('work');
+    }
+  }
+  document.getElementById('confirmYes').onclick = () => { overlay.classList.remove('show'); doStop(); };
+  document.getElementById('confirmNo').onclick = () => {
+    overlay.classList.remove('show');
+    state.status = 'running';
+    timerEndTime = Date.now() + state.remaining * 1000;
+    timerInterval = setInterval(tick, 200);
+    updateBtnMain();
+  };
+  _ring.style.transition = 'none';
+  _ring.setAttribute('stroke-dashoffset', '194.8');
 }
 btnMain.addEventListener('mousedown', () => {
   _wasIdle = state.status === 'idle';
   if (_wasIdle) { toggleTimer(); return; }
   _longFired = false;
+  _ring.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--accent-work').trim());
+  _ring.style.transition = 'stroke-dashoffset 1s linear';
+  _ring.setAttribute('stroke-dashoffset', '0');
   _pressTimer = setTimeout(() => { _stopSave(); _longFired = true; _pressTimer = null; }, 1000);
 });
 btnMain.addEventListener('mouseup', () => {
   if (_longFired) { _longFired = false; return; }
   if (_pressTimer) { clearTimeout(_pressTimer); _pressTimer = null; }
+  _ring.style.transition = 'stroke-dashoffset 0.3s ease-out';
+  _ring.setAttribute('stroke-dashoffset', '194.8');
   if (!_wasIdle) toggleTimer();
 });
 btnMain.addEventListener('mouseleave', () => {
-  if (!_longFired && _pressTimer) { clearTimeout(_pressTimer); _pressTimer = null; }
+  if (!_longFired && _pressTimer) {
+    clearTimeout(_pressTimer); _pressTimer = null;
+    _ring.style.transition = 'stroke-dashoffset 0.3s ease-out';
+    _ring.setAttribute('stroke-dashoffset', '194.8');
+  }
 });
 btnMain.addEventListener('touchstart', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mousedown')); });
 btnMain.addEventListener('touchend', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mouseup')); });
@@ -3705,36 +3786,13 @@ btnClearStats.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════
-// 键盘快捷键
-// ═══════════════════════════════════════════
+// Escape 关闭面板/抽屉
 document.addEventListener('keydown', (e) => {
-  // Escape 关闭所有面板/抽屉
   if (e.code === 'Escape') {
     settingsOverlay.classList.remove('open');
     statsOverlay.classList.remove('open');
     drawer.classList.remove('open');
     drawerRight.classList.remove('open');
-    return;
-  }
-
-  // 不在输入框/文本域/可编辑区域中时响应
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-  switch (e.code) {
-    case 'Space':
-      e.preventDefault();
-      toggleTimer();
-      break;
-    case 'KeyR':
-      resetTimer();
-      break;
-    case 'KeyS':
-      if (state.countUp && state.status === 'running') {
-        stopCountUp(); // 正向计时中按 S = 停止并记录
-      } else {
-        skipTimer();
-      }
-      break;
   }
 });
 
