@@ -474,7 +474,7 @@
     outline: none;
     transition: border-color 0.3s;
   }
-  .task-input:focus { border-color: rgba(231,76,60,0.5); }
+  .task-input:focus { border-color: var(--accent-work); }
   .task-input::placeholder { color: #555; }
 
   /* ── 统计 ── */
@@ -1108,8 +1108,8 @@
   }
   .drawer-todo-item:hover { background: rgba(255,255,255,0.05); }
   .drawer-todo-item.active-task {
-    background: rgba(231,76,60,0.12);
-    border: 1px solid rgba(231,76,60,0.3);
+    background: var(--input-bg);
+    border-left: 3px solid var(--accent-work);
   }
 
   .drawer-todo-check {
@@ -1310,9 +1310,9 @@
     outline: none;
     transition: border-color 0.3s;
   }
-  .task-input:focus { border-color: rgba(231,76,60,0.5); }
+  .task-input:focus { border-color: var(--accent-work); }
   .task-input::placeholder { color: #555; }
-  .task-input.has-task { border-color: rgba(231,76,60,0.4); }
+  .task-input.has-task { border-color: var(--accent-work); }
 
   /* ── 背景视频 ── */
   .bg-video {
