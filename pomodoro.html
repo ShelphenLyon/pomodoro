@@ -1451,7 +1451,7 @@
   </div>
 
   <!-- 快捷键提示 -->
-  <div class="hint" id="hintText">空格 开始/暂停 · R 重置 · S 跳过</div>
+  <div class="hint" id="hintText">空格 暂停 · R 重置 · 长按 结束</div>
 </div>
 
 <!-- 统计面板 -->
@@ -1888,13 +1888,8 @@ function updateDots() {
 function updateBtnMain() {
   btnMain.classList.remove('work', 'short', 'long', 'countup', 'countup-stop');
   btnMain.classList.add('work');
-  if (state.countUp && state.status === 'running') {
-    btnIcon.textContent = '⏹';
-  } else if (state.status === 'running') {
-    btnIcon.textContent = '⏸';
-  } else {
-    btnIcon.textContent = '▶';
-  }
+  if (state.status === 'running') { btnIcon.textContent = '⏸'; }
+  else { btnIcon.textContent = '▶'; }
 }
 
 function updateLabel() {
@@ -1933,7 +1928,7 @@ function updateCountUpUI() {
   if (state.countUp) {
     cl.classList.remove('active');
     ul.classList.add('active');
-    hintText.textContent = '空格 开始/暂停 · R 重置 · ⏹ 停止记录';
+    hintText.textContent = '空格 暂停 · R 重置 · 长按 结束';
   } else {
     cl.classList.add('active');
     ul.classList.remove('active');
@@ -2032,15 +2027,8 @@ function pauseTimer() {
 }
 
 function toggleTimer() {
-  if (state.status === 'running') {
-    if (state.countUp) {
-      stopCountUp(); // 正向计时运行中 → 停止并记录
-    } else {
-      pauseTimer();
-    }
-  } else {
-    startTimer();
-  }
+  if (state.status === 'running') { pauseTimer(); }
+  else { startTimer(); }
 }
 
 function tick() {
@@ -2241,9 +2229,41 @@ function switchMode(mode) {
 // ═══════════════════════════════════════════
 // 事件绑定
 // ═══════════════════════════════════════════
-btnMain.addEventListener('click', toggleTimer);
 btnReset.addEventListener('click', resetTimer);
 btnSkip.addEventListener('click', skipTimer);
+
+// 长按结束保存，短按暂停
+let _pressTimer = null, _longFired = false, _wasIdle = false;
+function _stopSave() {
+  if (state.countUp) { stopCountUp(); return; }
+  const elapsed = state.total - state.remaining;
+  clearInterval(timerInterval); timerInterval = null; timerEndTime = null;
+  state._elapsedStart = null; state._pausedElapsed = 0; state.status = 'idle';
+  playAlert(); document.title = '🍅 番茄钟';
+  if (state.mode === 'work' && elapsed >= 180) {
+    state.pomodoros++; stats.today++; stats.total++;
+    recordSession(elapsed); saveData(); renderTodo();
+    showToast(`已结束 用时${formatTime(elapsed)}`);
+  } else if (state.mode === 'work') showToast('不足3分钟，未记录');
+  else showToast('休息已结束');
+  resetTimerForMode(state.mode);
+}
+btnMain.addEventListener('mousedown', () => {
+  _wasIdle = state.status === 'idle';
+  if (_wasIdle) { toggleTimer(); return; }
+  _longFired = false;
+  _pressTimer = setTimeout(() => { _stopSave(); _longFired = true; _pressTimer = null; }, 1000);
+});
+btnMain.addEventListener('mouseup', () => {
+  if (_longFired) { _longFired = false; return; }
+  if (_pressTimer) { clearTimeout(_pressTimer); _pressTimer = null; }
+  if (!_wasIdle) toggleTimer();
+});
+btnMain.addEventListener('mouseleave', () => {
+  if (!_longFired && _pressTimer) { clearTimeout(_pressTimer); _pressTimer = null; }
+});
+btnMain.addEventListener('touchstart', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mousedown')); });
+btnMain.addEventListener('touchend', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mouseup')); });
 
 // 点击倒计时数字 → 打开计时设置
 timerTime.addEventListener('click', () => {
@@ -3703,11 +3723,7 @@ document.addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'Space':
       e.preventDefault();
-      if (state.countUp && state.status === 'running') {
-        stopCountUp(); // 正向计时中按空格 = 停止并记录
-      } else {
-        toggleTimer();
-      }
+      toggleTimer();
       break;
     case 'KeyR':
       resetTimer();
