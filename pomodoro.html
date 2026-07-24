@@ -1698,13 +1698,17 @@ const MODES = {
 };
 
 let state = {
-  mode: 'work',           // 'work' | 'short' | 'long'
-  status: 'idle',         // 'idle' | 'running' | 'paused'
-  remaining: 25 * 60,     // 剩余秒数 (倒计时) 或 已过秒数 (正向计时)
-  total: 25 * 60,         // 当前 session 总秒数 (倒计时) 或 环满秒数 (正向计时)
-  pomodoros: 0,           // 本周期已完成番茄数 (0-3)
-  countUp: false,          // 正向计时模式
-  hydrationActive: false,  // 补水提醒激活中（此时不更新计时器显示）
+  mode: 'work',
+  status: 'idle',
+  remaining: 25 * 60,
+  total: 25 * 60,
+  pomodoros: 0,
+  countUp: false,
+  hydrationActive: false,
+  _segments: [],      // 暂停段 [{start, end, duration}]
+  _segStart: 0,       // 当前段开始时间戳
+  _segRemaining: 0,   // 倒计时当前段开始时的 remaining
+  _sessionId: '',     // 当前 session 唯一 ID
 };
 
 // 设置
@@ -2020,15 +2024,21 @@ function startTimer() {
   if (state.status === 'idle') {
     state.status = 'running';
     if (state.countUp) {
-      // 正向计时：从 0 开始往上数
       state.remaining = 0;
-      state.total = 60 * 60; // 环满 = 60 分钟
-      timerEndTime = null;    // 用 elapsedStartTime 代替
+      state.total = 60 * 60;
+      timerEndTime = null;
       state._elapsedStart = Date.now();
       state._pausedElapsed = 0;
+      state._segments = [];
+      state._segStart = Date.now();
+      state._sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     } else {
       state.total = state.remaining;
       timerEndTime = Date.now() + state.remaining * 1000;
+      state._segments = [];
+      state._segStart = Date.now();
+      state._segRemaining = state.remaining;
+      state._sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
     timerInterval = setInterval(tick, 200);
     playClick();
@@ -2036,9 +2046,12 @@ function startTimer() {
     state.status = 'running';
     if (state.countUp) {
       state._elapsedStart = Date.now();
+      state._segStart = Date.now();
       timerEndTime = null;
     } else {
       timerEndTime = Date.now() + state.remaining * 1000;
+      state._segStart = Date.now();
+      state._segRemaining = state.remaining;
     }
     timerInterval = setInterval(tick, 200);
     playClick();
@@ -2056,6 +2069,15 @@ function pauseTimer() {
     state._pausedElapsed = state.remaining;
     state._elapsedStart = null;
   }
+  // 记录本段（两种模式）
+  const segEnd = Date.now();
+  let segDur = 0;
+  if (state.countUp) {
+    segDur = state.remaining - state._segments.reduce((s, x) => s + x.duration, 0);
+  } else {
+    segDur = state._segRemaining - state.remaining;
+  }
+  if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
   timerEndTime = null;
   updateBtnMain();
   updateCountUpUI();
@@ -2110,12 +2132,18 @@ function timerComplete() {
   sendNotification('🍅 番茄钟', `「${modeLabel}」时间到！`);
 
   if (state.mode === 'work') {
+    // 记录最后一段
+    const segEnd = Date.now();
+    const segDur = state._segRemaining; // 从段开始到 0
+    if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
     if (state.total >= 180) {
-      // 达到 3 分钟才记录
-      state.pomodoros++;
-      stats.today++;
-      stats.total++;
-      recordSession(state.total);
+      state.pomodoros++; stats.today++; stats.total++;
+      const task = taskInput.value.trim() || '未命名任务';
+      const date = new Date().toISOString().slice(0, 10);
+      state._segments.forEach(s => {
+        stats.sessionHistory.push({ date, timestamp: s.end, duration: s.duration, task, mode: 'countdown', sessionId: state._sessionId });
+      });
+      addTimeToTodoTask(task, state.total);
       saveData();
       renderTodo();
     }
@@ -2142,13 +2170,14 @@ function timerComplete() {
 }
 
 function stopCountUp() {
-  // 手动停止正向计时，记录一个番茄
   const elapsed = state.remaining;
+  // 记录最后一段
+  const segEnd = Date.now();
+  const segDur = elapsed - state._segments.reduce((s, x) => s + x.duration, 0);
+  if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
   clearInterval(timerInterval);
-  timerInterval = null;
-  timerEndTime = null;
-  state._elapsedStart = null;
-  state._pausedElapsed = 0;
+  timerInterval = null; timerEndTime = null;
+  state._elapsedStart = null; state._pausedElapsed = 0;
   state.status = 'idle';
 
   playAlert();
@@ -2159,15 +2188,20 @@ function stopCountUp() {
 
   if (state.mode === 'work') {
     if (elapsed >= 180) {
-      state.pomodoros++;
-      stats.today++;
-      stats.total++;
-      recordSession(elapsed);
+      state.pomodoros++; stats.today++; stats.total++;
+      // 按实际时间段写入多条记录
+      const task = taskInput.value.trim() || '未命名任务';
+      const date = new Date().toISOString().slice(0, 10);
+      state._segments.forEach(seg => {
+        stats.sessionHistory.push({
+          date, timestamp: seg.end, duration: seg.duration, task, mode: 'countup', sessionId: state._sessionId
+        });
+      });
+      addTimeToTodoTask(task, elapsed);
       saveData();
       renderTodo();
       showToast(`✅ 完成！用时 ${elapsedStr}`);
 
-      // 进入休息（休息用倒计时）
       state.countUp = false;
       if (state.pomodoros >= 4) {
         state.pomodoros = 0;
@@ -2299,8 +2333,18 @@ function _stopSave() {
     state._elapsedStart = null; state._pausedElapsed = 0; state.status = 'idle';
     playAlert(); document.title = '🍅 番茄钟';
     if (elapsed >= 180) {
+      // 记录最后一段
+      const segEnd = Date.now();
+      const segDur = state._segRemaining - state.remaining;
+      if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
       state.pomodoros++; stats.today++; stats.total++;
-      recordSession(elapsed); saveData(); renderTodo();
+      const task = taskInput.value.trim() || '未命名任务';
+      const date = new Date().toISOString().slice(0, 10);
+      state._segments.forEach(s => {
+        stats.sessionHistory.push({ date, timestamp: s.end, duration: s.duration, task, mode: 'countdown', sessionId: state._sessionId });
+      });
+      addTimeToTodoTask(task, elapsed);
+      saveData(); renderTodo();
       showToast(`已结束 用时${formatTime(elapsed)}`);
       if (state.pomodoros >= 4) { state.pomodoros = 0; resetTimerForMode('long'); startTimer(); }
       else { resetTimerForMode('short'); startTimer(); }
@@ -3265,7 +3309,9 @@ function renderStats() {
   const selDate = statsDate || today;
   const selSessions = getSessionsByDate(selDate);
   const selTotalSec = selSessions.reduce((sum, s) => sum + s.duration, 0);
-  const selCount = selSessions.length;
+  // 按 sessionId 去重计数
+  const selIds = new Set(selSessions.map(s => s.sessionId || ('old_' + s.timestamp + '_' + s.duration)));
+  const selCount = selIds.size;
   const allTotalSec = stats.sessionHistory.reduce((sum, s) => sum + s.duration, 0);
   const allCount = stats.sessionHistory.length;
 
@@ -3285,7 +3331,7 @@ function renderStats() {
 
   // ── 日期选择器 ──
   html += `<div class="date-chips">`;
-  const showDates = availDates.slice(0, 14);
+  const showDates = availDates.slice(0, 5);
   showDates.forEach(d => {
     const isSel = d === selDate;
     const isToday = d === today;
@@ -3296,24 +3342,35 @@ function renderStats() {
 
   // ── 专注记录（可折叠）──
   selSessions.sort((a, b) => b.timestamp - a.timestamp);
+  // 先合并再计数
+  const groups = {};
+  selSessions.forEach(s => {
+    const sid = s.sessionId || ('old_' + s.timestamp + '_' + s.duration);
+    if (!groups[sid]) groups[sid] = { task: s.task, duration: 0, startTime: Infinity, endTime: 0, count: 0 };
+    const g = groups[sid];
+    g.duration += s.duration;
+    g.count++;
+    const sStart = s.timestamp - s.duration * 1000;
+    if (sStart < g.startTime) g.startTime = sStart;
+    if (s.timestamp > g.endTime) g.endTime = s.timestamp;
+  });
+  const merged = Object.values(groups).sort((a, b) => b.endTime - a.endTime);
   html += `<div class="session-toggle" id="sessionToggle">
-    <span>专注记录 (${selSessions.length}条)</span>
+    <span>专注记录 (${merged.length}条)</span>
     <span class="session-arrow">▶</span>
   </div>
   <div class="session-list-wrap" id="sessionListWrap" style="display:none">`;
-  if (selSessions.length === 0) {
+  if (merged.length === 0) {
     html += `<div class="stats-empty">暂无记录</div>`;
   } else {
     html += `<div class="session-list">`;
-    selSessions.forEach(s => {
-      const end = new Date(s.timestamp);
-      const start = new Date(end.getTime() - s.duration * 1000);
-      const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      const timeStr = `${fmt(start)} - ${fmt(end)}`;
+    const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    merged.forEach(m => {
+      const segCount = m.count > 1 ? ` (${m.count}段)` : '';
       html += `<div class="session-row">
-        <span class="session-task">${escapeHtml(s.task || '未命名')}</span>
-        <span class="session-time">${timeStr}</span>
-        <span class="session-dur">${formatDuration(s.duration)}</span>
+        <span class="session-task">${escapeHtml(m.task || '未命名')}${segCount}</span>
+        <span class="session-time">${fmt(new Date(m.startTime))} - ${fmt(new Date(m.endTime))}</span>
+        <span class="session-dur">${formatDuration(m.duration)}</span>
       </div>`;
     });
     html += `</div>`;
