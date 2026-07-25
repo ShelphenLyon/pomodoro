@@ -2185,7 +2185,7 @@ function tick() {
   const thisSec = Math.floor(now / 1000);
   if (state.mode === 'work' && thisSec !== state._lastDropSec) {
     state._lastDropSec = thisSec;
-    if (Math.random() * 100 < 0.15) {
+    if (Math.random() * 100 < 0.2) {
       tryCardDrop();
     }
   }
