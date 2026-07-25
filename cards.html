@@ -51,6 +51,10 @@ body::after {
 .modal-name { font-size:16px; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:8px; }
 .modal-count { font-size:13px; color:var(--text); margin-bottom:4px; }
 .modal-time { font-size:11px; color:var(--text-secondary); }
+#logModal .modal-card::-webkit-scrollbar { width:4px; }
+#logModal .modal-card::-webkit-scrollbar-track { background:rgba(13,13,26,0.5); border-radius:2px; }
+#logModal .modal-card::-webkit-scrollbar-thumb { background:linear-gradient(180deg, rgba(201,168,76,0.4), rgba(139,26,74,0.4)); border-radius:2px; }
+#logModal .modal-card::-webkit-scrollbar-thumb:hover { background:linear-gradient(180deg, rgba(201,168,76,0.6), rgba(139,26,74,0.6)); }
 h1 {
   margin:20px 0 4px; font-size:28px; font-weight:700; letter-spacing:6px;
   color:var(--gold); text-shadow:0 0 20px rgba(201,168,76,0.3);
@@ -120,9 +124,17 @@ h1 {
 <div class="subtitle">TAROT COLLECTION</div>
 <div class="stats-bar">
   <span>Collected: <b id="collectedCount">0</b></span>
+  <button class="btn" id="logBtn">Log</button>
   <button class="btn" id="resetCards">Reset</button>
 </div>
 <div class="cards-grid" id="cardsGrid"></div>
+
+<div class="modal-overlay" id="logModal">
+  <div class="modal-card" style="max-width:400px;max-height:70vh;overflow-y:auto">
+    <div class="modal-name" style="margin-bottom:12px">Drop Log</div>
+    <div id="logContent"></div>
+  </div>
+</div>
 <div class="footer-line"></div>
 
 <div class="modal-overlay" id="cardModal">
@@ -210,6 +222,25 @@ function render() {
   });
 }
 render();
+// 掉落记录弹窗
+document.getElementById('logBtn').addEventListener('click', () => {
+  const data = loadCards();
+  const all = data.cards||[];
+  const items = [...all].reverse().slice(0, 200);
+  const fmt = ts => ts ? new Date(ts).toLocaleString() : '-';
+  const html = items.length === 0 ? '<div style="color:var(--text-secondary);font-size:11px">No drops yet</div>' :
+    items.map(c => {
+      const idx = parseInt((typeof c === 'string' ? c : c.id).replace('card_',''));
+      const name = ALL_CARDS[idx] || 'Unknown';
+      const time = c.time ? fmt(c.time) : '-';
+      return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:10px;color:var(--text);border-bottom:1px solid rgba(201,168,76,0.08)"><span>${name}</span><span style="color:rgba(201,168,76,0.5);font-size:9px;margin-left:12px">${time}</span></div>`;
+    }).join('');
+  document.getElementById('logContent').innerHTML = html;
+  document.getElementById('logModal').classList.add('show');
+});
+document.getElementById('logModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('show');
+});
 document.getElementById('resetCards').addEventListener('click', () => {
   if (confirm('Reset all collected cards?')) {
     localStorage.setItem('pomodoro_cards', JSON.stringify({ dropRate: 1 }));
