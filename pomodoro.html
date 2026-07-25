@@ -1784,7 +1784,7 @@ function saveData() {
     // 清理 90 天前的记录
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 90);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = localDate(cutoff);
     stats.sessionHistory = stats.sessionHistory.filter(s => s.date >= cutoffStr);
 
     localStorage.setItem('pomodoro_data', JSON.stringify({ settings, stats }));
@@ -1793,8 +1793,9 @@ function saveData() {
 
 loadData();
 
+function localDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 // 检查是否新的一天
-const todayStr = new Date().toISOString().slice(0, 10);
+const todayStr = localDate(new Date());
 if (stats.date !== todayStr) {
   stats.date = todayStr;
   stats.today = 0;
@@ -1892,7 +1893,7 @@ function formatDurationShort(seconds) {
 
 function recordSession(duration) {
   const now = new Date();
-  const date = now.toISOString().slice(0, 10);
+  const date = localDate(now);
   const task = taskInput.value.trim() || '未命名任务';
   stats.sessionHistory.push({
     date: date,
@@ -1961,7 +1962,7 @@ function updateLabel() {
 }
 
 function updateStats() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const todaySec = stats.sessionHistory
     .filter(s => s.date === today)
     .reduce((sum, s) => sum + s.duration, 0);
@@ -2235,7 +2236,7 @@ function timerComplete() {
     if (state.total >= 180) {
       state.pomodoros++; stats.today++; stats.total++;
       const task = taskInput.value.trim() || '未命名任务';
-      const date = new Date().toISOString().slice(0, 10);
+      const date = localDate(new Date());
       state._segments.forEach(s => {
         stats.sessionHistory.push({ date, timestamp: s.end, duration: s.duration, task, mode: 'countdown', sessionId: state._sessionId });
       });
@@ -2287,7 +2288,7 @@ function stopCountUp() {
       state.pomodoros++; stats.today++; stats.total++;
       // 按实际时间段写入多条记录
       const task = taskInput.value.trim() || '未命名任务';
-      const date = new Date().toISOString().slice(0, 10);
+      const date = localDate(new Date());
       state._segments.forEach(seg => {
         stats.sessionHistory.push({
           date, timestamp: seg.end, duration: seg.duration, task, mode: 'countup', sessionId: state._sessionId
@@ -2435,7 +2436,7 @@ function _stopSave() {
       if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
       state.pomodoros++; stats.today++; stats.total++;
       const task = taskInput.value.trim() || '未命名任务';
-      const date = new Date().toISOString().slice(0, 10);
+      const date = localDate(new Date());
       state._segments.forEach(s => {
         stats.sessionHistory.push({ date, timestamp: s.end, duration: s.duration, task, mode: 'countdown', sessionId: state._sessionId });
       });
@@ -2939,7 +2940,7 @@ document.getElementById('themeOptions').addEventListener('click', (e) => {
 // 每日清单（左侧抽屉）
 // ═══════════════════════════════════════════
 function cleanupOldTodos() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   stats.todoList.forEach(t => {
     if (t.date !== today) { t.date = today; t.done = false; t.totalSeconds = 0; }
   });
@@ -2956,7 +2957,7 @@ function escapeHtml(str) {
 }
 
 function renderTodo() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const allItems = stats.todoList.filter(t => t.date === today);
   const parents = allItems.filter(t => !t.parentId);
   const children = allItems.filter(t => t.parentId);
@@ -3008,7 +3009,7 @@ function renderTodoItem(t, currentTask, isSub) {
 function addTodo() {
   const text = drawerAddInput.value.trim();
   if (!text) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const entry = { id: generateId(), text, done: false, date: today, totalSeconds: 0 };
   if (currentParentId) {
     entry.parentId = currentParentId;
@@ -3067,7 +3068,7 @@ function toggleTodoItem(id) {
 
 // 子任务全完成 → 母任务自动打勾；任一子任务取消 → 母任务取消
 function syncParentDone() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const parents = stats.todoList.filter(t => t.date === today && !t.parentId);
   parents.forEach(p => {
     const children = stats.todoList.filter(t => t.date === today && t.parentId === p.id);
@@ -3104,7 +3105,7 @@ function deleteTodoItem(id) {
 // 记录时间到对应清单任务及其母任务，并自动打勾
 function addTimeToTodoTask(taskName, duration) {
   if (!taskName || taskName === '未命名任务') return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const item = stats.todoList.find(t =>
     t.date === today && t.text === taskName
   );
@@ -3278,13 +3279,13 @@ try {
 // 统计面板
 // ═══════════════════════════════════════════
 function getTodaySessions() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   return stats.sessionHistory.filter(s => s.date === today && s.task);
 }
 
 function getChartData(mode, offset) {
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = localDate(today);
   const result = [];
 
   if (mode === 'week') {
@@ -3298,7 +3299,7 @@ function getChartData(mode, offset) {
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      const ds = d.toISOString().slice(0, 10);
+      const ds = localDate(d);
       const totalSec = stats.sessionHistory.filter(s => s.date === ds).reduce((s, r) => s + r.duration, 0);
       const isToday = ds === todayStr;
       result.push({
@@ -3401,7 +3402,7 @@ function renderBarSegments(sessions, taskColors) {
 }
 
 function renderStats() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const selDate = statsDate || today;
   const selSessions = getSessionsByDate(selDate);
   const selTotalSec = selSessions.reduce((sum, s) => sum + s.duration, 0);
@@ -3817,7 +3818,7 @@ function renderDonutChart(entries, selDate) {
   const container = document.getElementById('donutContainer');
   if (!container) return;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate(new Date());
   const refDate = selDate || today;
   const title = refDate === today ? '任务占比' : refDate;
 
