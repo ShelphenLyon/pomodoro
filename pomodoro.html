@@ -1526,6 +1526,9 @@
       <div class="settings-menu-item" data-page="timer">计时设置 <span class="menu-arrow">›</span></div>
       <div class="settings-menu-item" data-page="appearance">外观 <span class="menu-arrow">›</span></div>
       <div class="settings-menu-item" data-page="notify">通知管理 <span class="menu-arrow">›</span></div>
+      <div class="settings-menu-item" id="exportAll">导出数据 <span class="menu-arrow">↗</span></div>
+      <div class="settings-menu-item" id="importAll">导入数据 <span class="menu-arrow">↘</span></div>
+      <input type="file" id="importFile" accept=".json" style="display:none">
       <button class="btn-close-settings" id="btnCloseSettings" style="margin-top:20px">完成</button>
     </div>
     <!-- 计时设置 -->
@@ -2041,6 +2044,40 @@ function tryCardDrop() {
 
 $('#cardIndicator').addEventListener('click', () => { window.open('cards.html', '_blank'); });
 $('#btnCards').addEventListener('click', () => { window.open('cards.html', '_blank'); });
+
+// 导出导入数据
+$('#exportAll').addEventListener('click', () => {
+  const all = {
+    pomodoro: JSON.parse(localStorage.getItem('pomodoro_data') || '{}'),
+    cards: JSON.parse(localStorage.getItem('pomodoro_cards') || '{}'),
+    memo: localStorage.getItem('pomodoro_memo') || '',
+    rightWidth: localStorage.getItem('pomodoro_rightWidth') || '',
+    task: localStorage.getItem('pomodoro_task') || ''
+  };
+  const blob = new Blob([JSON.stringify(all, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pomodoro_backup.json';
+  a.click();
+});
+$('#importAll').addEventListener('click', () => { $('#importFile').click(); });
+$('#importFile').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      if (d.pomodoro) localStorage.setItem('pomodoro_data', JSON.stringify(d.pomodoro));
+      if (d.cards) localStorage.setItem('pomodoro_cards', JSON.stringify(d.cards));
+      if (d.memo) localStorage.setItem('pomodoro_memo', d.memo);
+      if (d.rightWidth) localStorage.setItem('pomodoro_rightWidth', d.rightWidth);
+      if (d.task) localStorage.setItem('pomodoro_task', d.task);
+      location.reload();
+    } catch(e) { alert('文件格式错误'); }
+  };
+  reader.readAsText(file);
+});
 
 // ═══════════════════════════════════════════
 // 计时器逻辑
