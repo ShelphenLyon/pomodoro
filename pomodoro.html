@@ -1491,7 +1491,6 @@
     <div><strong id="statTodayTime">0m</strong>今日专注</div>
     <div><strong id="statToday">0</strong>今日 🍅</div>
     <div><strong id="statTotal">0</strong>总计 🍅</div>
-    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;cursor:pointer" id="cardIndicator" title="查看塔罗牌收集">收集</div>
   </div>
 
   <!-- 快捷键提示 -->
@@ -2042,7 +2041,6 @@ function tryCardDrop() {
   showToast(`Obtained: ${ALL_CARDS[idx]}`);
 }
 
-$('#cardIndicator').addEventListener('click', () => { window.open('cards.html', '_blank'); });
 $('#btnCards').addEventListener('click', () => { window.open('cards.html', '_blank'); });
 
 // 导出导入数据
