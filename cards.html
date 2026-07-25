@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Arcana</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+:root {
+  --bg: #100b1a; --card-bg: #1a1028; --text: #d4c8b8; --text-secondary: #8a7e6b;
+  --accent: #8b1a4a; --gold: #c9a84c; --purple: #5b2d8e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Cinzel','Georgia',serif;
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(150,110,160,0.20) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 0%, rgba(200,170,80,0.08) 0%, transparent 50%),
+    repeating-conic-gradient(at 50% 0%, rgba(200,170,80,0.06) 0deg 0.5deg, transparent 0.5deg 3deg);
+  color:var(--text); min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; padding:20px;
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:-1;
+  border:1px solid rgba(201,168,76,0.06);
+  margin:8px; border-radius:2px;
+}
+body::after {
+  content:''; position:fixed; top:30px; left:50%; transform:translateX(-50%);
+  width:200px; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent);
+  pointer-events:none; z-index:-1;
+}
+.footer-line {
+  width:100%; max-width:960px; height:1px; margin-top:40px;
+  background:linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent);
+}
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.75);
+  display:none; align-items:center; justify-content:center; z-index:100;
+}
+.modal-overlay.show { display:flex; }
+.modal-card {
+  background:var(--card-bg); border:1px solid var(--gold);
+  border-radius:8px; padding:32px 28px; text-align:center;
+  box-shadow:0 0 40px rgba(201,168,76,0.2);
+  min-width:220px;
+}
+.modal-img { max-width:260px; border-radius:6px; margin-bottom:12px; box-shadow:0 0 30px rgba(201,168,76,0.3); }
+.modal-name { font-size:16px; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:8px; }
+.modal-count { font-size:13px; color:var(--text); margin-bottom:4px; }
+.modal-time { font-size:11px; color:var(--text-secondary); }
+h1 {
+  margin:20px 0 4px; font-size:28px; font-weight:700; letter-spacing:6px;
+  color:var(--gold); text-shadow:0 0 20px rgba(201,168,76,0.3);
+}
+.subtitle { font-size:11px; color:var(--text-secondary); letter-spacing:3px; margin-bottom:20px; }
+.stats-bar {
+  display:flex; align-items:center; gap:16px; margin-bottom:24px;
+  font-size:12px; color:var(--text-secondary); letter-spacing:2px;
+}
+.stats-bar b { color:var(--gold); font-size:16px; }
+.btn {
+  padding:6px 18px; border:1px solid rgba(201,168,76,0.15); border-radius:2px;
+  background:transparent; color:rgba(201,168,76,0.4); cursor:pointer;
+  font-family:inherit; font-size:10px; letter-spacing:3px; transition:all 0.4s; text-transform:uppercase;
+}
+.btn:hover { border-color:var(--gold); color:var(--gold); box-shadow:0 0 8px rgba(201,168,76,0.1); }
+.cards-grid { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; max-width:960px; padding-bottom:60px; }
+.card {
+  width:86px; height:130px; border-radius:4px; display:flex;
+  flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; transition:all 0.5s; cursor:default;
+  background:var(--card-bg);
+  border:1px solid #1a1a2e; position:relative;
+}
+.card::before {
+  content:''; position:absolute; inset:3px; border:1px solid #1a1a2e;
+  border-radius:2px; pointer-events:none;
+}
+.card.owned {
+  border-color:var(--gold);
+  box-shadow:0 0 14px rgba(201,168,76,0.18), inset 0 0 10px rgba(201,168,76,0.04);
+  transition:all 0.5s;
+}
+.card.owned:hover { box-shadow:0 0 32px rgba(201,168,76,0.55), inset 0 0 20px rgba(201,168,76,0.12); transform:translateY(-3px); }
+.card.owned::before { border-color:rgba(201,168,76,0.3); }
+.card.major { border-color:#3a2050; }
+.card.major.owned {
+  border-color:var(--gold);
+  box-shadow:0 0 28px rgba(201,168,76,0.4), inset 0 0 16px rgba(201,168,76,0.08);
+}
+.card.major.owned:hover { box-shadow:0 0 44px rgba(201,168,76,0.6), inset 0 0 24px rgba(201,168,76,0.14); }
+.card-icon { font-size:22px; color:var(--gold); margin-bottom:4px; z-index:1; min-height:28px; display:flex; align-items:center; }
+.card-img { width:100%; height:100%; object-fit:cover; border-radius:4px; position:absolute; inset:0; z-index:0; }
+.card-back { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, #1a1028 0%, #2a1550 50%, #1a1028 100%);
+  border:2px solid #2a2040; border-radius:4px; font-size:32px; color:rgba(201,168,76,0.15); position:absolute; inset:0; z-index:0; }
+.card-name { font-size:8px; letter-spacing:1px; line-height:1.3; z-index:2; padding:0 4px; position:relative; background:rgba(0,0,0,0.7); margin-top:auto; width:100%; text-align:center; padding:2px 4px; }
+.card.locked .card-icon { color:rgba(180,160,200,0.2); }
+.card.locked .card-name { color:rgba(180,160,200,0.35); }
+.section-title {
+  width:100%; text-align:center; font-size:13px; font-weight:700; letter-spacing:4px;
+  margin:28px 0 10px; color:var(--accent); text-transform:uppercase;
+  display:flex; align-items:center; justify-content:center; gap:16px;
+}
+.section-title::before, .section-title::after {
+  content:''; height:1px; width:60px;
+  background:linear-gradient(90deg, transparent, rgba(139,26,74,0.5), transparent);
+}
+.suit-title {
+  width:100%; text-align:center; font-size:11px; letter-spacing:3px;
+  color:rgba(180,160,200,0.7); margin:16px 0 6px; text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+<h1>THE ARCANUM</h1>
+<div class="subtitle">TAROT COLLECTION</div>
+<div class="stats-bar">
+  <span>Collected: <b id="collectedCount">0</b></span>
+  <button class="btn" id="resetCards">Reset</button>
+</div>
+<div class="cards-grid" id="cardsGrid"></div>
+<div class="footer-line"></div>
+
+<div class="modal-overlay" id="cardModal">
+  <div class="modal-card">
+    <img class="modal-img" id="modalImg" src="" alt="">
+    <div class="modal-name" id="modalName"></div>
+    <div class="modal-count" id="modalCount"></div>
+    <div class="modal-time" id="modalTime"></div>
+  </div>
+</div>
+
+<script>
+const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+const ALL_CARDS = [
+  'The Fool','The Magician','The High Priestess','The Empress','The Emperor','The Hierophant','The Lovers','The Chariot',
+  'Strength','The Hermit','Wheel of Fortune','Justice','The Hanged Man','Death','Temperance','The Devil',
+  'The Tower','The Star','The Moon','The Sun','Judgement','The World',
+  'Ace of Wands','II of Wands','III of Wands','IV of Wands','V of Wands','VI of Wands','VII of Wands','VIII of Wands','IX of Wands','X of Wands','Page of Wands','Knight of Wands','Queen of Wands','King of Wands',
+  'Ace of Cups','II of Cups','III of Cups','IV of Cups','V of Cups','VI of Cups','VII of Cups','VIII of Cups','IX of Cups','X of Cups','Page of Cups','Knight of Cups','Queen of Cups','King of Cups',
+  'Ace of Swords','II of Swords','III of Swords','IV of Swords','V of Swords','VI of Swords','VII of Swords','VIII of Swords','IX of Swords','X of Swords','Page of Swords','Knight of Swords','Queen of Swords','King of Swords',
+  'Ace of Pentacles','II of Pentacles','III of Pentacles','IV of Pentacles','V of Pentacles','VI of Pentacles','VII of Pentacles','VIII of Pentacles','IX of Pentacles','X of Pentacles','Page of Pentacles','Knight of Pentacles','Queen of Pentacles','King of Pentacles',
+];
+const MAJOR_COUNT = 22;
+
+function loadCards() {
+  try { return JSON.parse(localStorage.getItem('pomodoro_cards')||'{}'); } catch(e) { return {}; }
+}
+function getSuit(name) {
+  if (name.includes('Wands')) return 'Wands';
+  if (name.includes('Cups')) return 'Cups';
+  if (name.includes('Swords')) return 'Swords';
+  if (name.includes('Pentacles')) return 'Pentacles';
+  return '';
+}
+function getCardImage(idx) { return 'cards/' + idx + '.jpg'; }
+function render() {
+  const data = loadCards();
+  const all = data.cards||[];
+  const counts = {};
+  const latest = {};
+  all.forEach(c => {
+    const id = typeof c === 'string' ? c : c.id;
+    counts[id] = (counts[id]||0) + 1;
+    if (c.time && (!latest[id] || c.time > latest[id])) latest[id] = c.time;
+  });
+  document.getElementById('collectedCount').textContent = all.length;
+  let html = '<div class="section-title">Major Arcana</div>';
+  let lastSuit = '';
+  ALL_CARDS.forEach((name, i) => {
+    const id = 'card_'+i;
+    const cnt = counts[id]||0;
+    const have = cnt > 0;
+    const isMajor = i < MAJOR_COUNT;
+    const suit = getSuit(name);
+    if (suit && suit !== lastSuit) {
+      lastSuit = suit;
+      html += `<div class="suit-title">${suit}</div>`;
+    }
+    const roman = cnt > 0 && cnt <= 10 ? ROMAN[cnt] : (cnt || '');
+    html += `<div class="card${isMajor?' major':''}${have?' owned':' locked'}" data-name="${name}" data-count="${cnt}" data-latest="${latest[id]||''}">
+      ${have ? `<img src="${getCardImage(i)}" class="card-img" onerror="this.style.display='none'" alt="">` : '<div class="card-back">&#x2726;</div>'}
+      <div class="card-name">${name}</div>
+    </div>`;
+  });
+  document.getElementById('cardsGrid').innerHTML = html;
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => {
+      const cnt = parseInt(card.dataset.count)||0;
+      const latest = card.dataset.latest;
+      const name = card.dataset.name;
+      if (cnt === 0) return;
+      const t = latest ? new Date(parseInt(latest)) : null;
+      const timeStr = t ? t.toLocaleString() : 'unknown';
+      const idx = ALL_CARDS.indexOf(name);
+      document.getElementById('modalImg').src = idx >= 0 ? getCardImage(idx) : '';
+      document.getElementById('modalName').textContent = name;
+      const roman = cnt > 0 && cnt <= 10 ? ROMAN[cnt] : cnt;
+      document.getElementById('modalCount').textContent = 'Owned: ' + roman;
+      document.getElementById('modalTime').textContent = 'Last: ' + timeStr;
+      document.getElementById('cardModal').classList.add('show');
+    });
+  });
+  document.getElementById('cardModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+}
+render();
+document.getElementById('resetCards').addEventListener('click', () => {
+  if (confirm('Reset all collected cards?')) {
+    localStorage.setItem('pomodoro_cards', JSON.stringify({ dropRate: 1 }));
+    render();
+  }
+});
+window.addEventListener('storage', (e) => {
+  if (e.key === 'pomodoro_cards') render();
+});
+</script>
+</body>
+</html>

@@ -548,6 +548,22 @@
   }
   .btn-stats:hover { color: #fff; background: var(--btn-bg); }
   .btn-stats.has-data { color: var(--accent-up); }
+  .btn-cards {
+    position: absolute;
+    top: 8px; right: 100px;
+    width: 36px; height: 36px;
+    font-size: 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+  .btn-cards:hover { color: #fff; background: var(--btn-bg); }
 
   /* ── 统计面板 ── */
   .stats-overlay {
@@ -1413,8 +1429,8 @@
 <div class="app" id="app">
   <!-- 设置按钮 -->
   <button class="btn-settings" id="btnSettings" title="设置">⚙️</button>
-  <!-- 统计按钮 -->
   <button class="btn-stats" id="btnStats" title="统计数据">📊</button>
+  <button class="btn-cards" id="btnCards" title="塔罗牌收集">🃏</button>
 
   <!-- 模式切换 -->
   <div class="mode-tabs" id="modeTabs">
@@ -1475,6 +1491,7 @@
     <div><strong id="statTodayTime">0m</strong>今日专注</div>
     <div><strong id="statToday">0</strong>今日 🍅</div>
     <div><strong id="statTotal">0</strong>总计 🍅</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;cursor:pointer" id="cardIndicator" title="查看塔罗牌收集">收集</div>
   </div>
 
   <!-- 快捷键提示 -->
@@ -1709,6 +1726,7 @@ let state = {
   _segStart: 0,       // 当前段开始时间戳
   _segRemaining: 0,   // 倒计时当前段开始时的 remaining
   _sessionId: '',     // 当前 session 唯一 ID
+  _lastDropSec: 0,    // 上次卡片掉落检查秒数
 };
 
 // 设置
@@ -1987,6 +2005,44 @@ function refreshAllUI() {
 }
 
 // ═══════════════════════════════════════════
+// 卡片掉落
+// ═══════════════════════════════════════════
+const ALL_CARDS = [
+  'The Fool','The Magician','The High Priestess','The Empress','The Emperor','The Hierophant','The Lovers','The Chariot',
+  'Strength','The Hermit','Wheel of Fortune','Justice','The Hanged Man','Death','Temperance','The Devil',
+  'The Tower','The Star','The Moon','The Sun','Judgement','The World',
+  'Ace of Wands','II of Wands','III of Wands','IV of Wands','V of Wands','VI of Wands','VII of Wands','VIII of Wands','IX of Wands','X of Wands','Page of Wands','Knight of Wands','Queen of Wands','King of Wands',
+  'Ace of Cups','II of Cups','III of Cups','IV of Cups','V of Cups','VI of Cups','VII of Cups','VIII of Cups','IX of Cups','X of Cups','Page of Cups','Knight of Cups','Queen of Cups','King of Cups',
+  'Ace of Swords','II of Swords','III of Swords','IV of Swords','V of Swords','VI of Swords','VII of Swords','VIII of Swords','IX of Swords','X of Swords','Page of Swords','Knight of Swords','Queen of Swords','King of Swords',
+  'Ace of Pentacles','II of Pentacles','III of Pentacles','IV of Pentacles','V of Pentacles','VI of Pentacles','VII of Pentacles','VIII of Pentacles','IX of Pentacles','X of Pentacles','Page of Pentacles','Knight of Pentacles','Queen of Pentacles','King of Pentacles',
+];
+// 卡牌权重（可按 cards.html 设置覆盖）
+const CARD_WEIGHTS = [
+  0.5, 2,2,2,2,2,2,2, 2,2,0.75,2,2,1.5,2,1.5, 1.5,5,5,1,2,0.5, // Major
+  54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25, 20,20,15,15, // Wands
+  54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25, 20,20,15,15, // Cups
+  54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25, 20,20,15,15, // Swords
+  54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25,54.25, 20,20,15,15, // Pentacles
+];
+function tryCardDrop() {
+  let data = JSON.parse(localStorage.getItem('pomodoro_cards')||'{}');
+  // 权重随机选择
+  const w = data.cardWeights || CARD_WEIGHTS;
+  const totalW = w.reduce((s, x) => s + x, 0);
+  let r = Math.random() * totalW;
+  let idx = 0;
+  for (; idx < w.length; idx++) { r -= w[idx]; if (r <= 0) break; }
+  if (!data.cards) data.cards = [];
+  data.cards.push({ id: 'card_'+idx, time: Date.now() });
+  localStorage.setItem('pomodoro_cards', JSON.stringify(data));
+  playBeep(523, 0.1); setTimeout(() => playBeep(659, 0.1), 120); setTimeout(() => playBeep(784, 0.2), 240);
+  showToast(`Obtained: ${ALL_CARDS[idx]}`);
+}
+
+$('#cardIndicator').addEventListener('click', () => { window.open('cards.html', '_blank'); });
+$('#btnCards').addEventListener('click', () => { window.open('cards.html', '_blank'); });
+
+// ═══════════════════════════════════════════
 // 计时器逻辑
 // ═══════════════════════════════════════════
 let timerInterval = null;
@@ -2090,22 +2146,27 @@ function toggleTimer() {
 }
 
 function tick() {
+  const now = Date.now();
+  const thisSec = Math.floor(now / 1000);
+  if (state.mode === 'work' && thisSec !== state._lastDropSec) {
+    state._lastDropSec = thisSec;
+    if (Math.random() * 100 < 0.056) {
+      tryCardDrop();
+    }
+  }
+
   if (state.countUp) {
-    // 正向计时：计算已过秒数
     if (!state._elapsedStart) return;
-    const now = Date.now();
     const newElapsed = state._pausedElapsed + Math.round((now - state._elapsedStart) / 1000);
     if (newElapsed !== state.remaining) {
       state.remaining = newElapsed;
       updateTimerDisplay();
       document.title = `🔼 ${formatTime(state.remaining)} - 正向计时`;
     }
-    return; // 正向计时不自动结束
+    return;
   }
 
-  // 倒计时模式
   if (!timerEndTime) return;
-  const now = Date.now();
   const newRemaining = Math.max(0, Math.round((timerEndTime - now) / 1000));
 
   if (newRemaining !== state.remaining) {
