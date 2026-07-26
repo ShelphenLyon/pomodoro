@@ -2031,8 +2031,8 @@ function writeSegments(segments, sessionId, task) {
   segments.forEach(seg => {
     const d1 = new Date(seg.start), d2 = new Date(seg.end);
     if (localDate(d1) !== localDate(d2)) {
-      const mid = new Date(localDate(d2) + 'T00:00:00').getTime();
-      stats.sessionHistory.push({ date: localDate(d1), timestamp: mid, duration: Math.round((mid - seg.start) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
+      const mid = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
+      stats.sessionHistory.push({ date: localDate(d1), timestamp: mid, duration: Math.round((mid - seg.start) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId: '' });
       stats.sessionHistory.push({ date: localDate(d2), timestamp: seg.end, duration: Math.round((seg.end - mid) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
     } else {
       stats.sessionHistory.push({ date: localDate(d1), timestamp: seg.end, duration: seg.duration, task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
@@ -3410,8 +3410,12 @@ function renderStats() {
   const selSessions = getSessionsByDate(selDate);
   const selTotalSec = selSessions.reduce((sum, s) => sum + s.duration, 0);
   // 按 sessionId 去重计数
-  const selIds = new Set(selSessions.map(s => s.sessionId || ('old_' + s.timestamp + '_' + s.duration)));
+  const selIds = new Set(selSessions.filter(s => s.sessionId).map(s => s.sessionId));
   const selCount = selIds.size;
+  // 跨午夜碎片也计入总时长但不算独立番茄
+
+  // 计算 session 合并后的总时长（用于专注记录合并）
+  const selMergedIds = new Set(selSessions.map(s => s.sessionId || ('old_' + s.timestamp + '_' + s.duration)));
   const allTotalSec = stats.sessionHistory.reduce((sum, s) => sum + s.duration, 0);
   const allCount = stats.sessionHistory.length;
 
@@ -3525,6 +3529,7 @@ function renderStats() {
         remaining -= firstMin;
       }
       h++;
+      if (h >= 24) h = 0; // 跨午夜绕回 0 点
       while (remaining > 0 && h < 24) {
         const chunk = Math.min(60, remaining);
         data[h].sessions.push({ task: s.task, duration: Math.round(chunk * 60) });
