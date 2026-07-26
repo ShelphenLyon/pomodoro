@@ -2027,6 +2027,19 @@ const CARD_WEIGHTS = [
   25,25,25,25,25,25,25,25,25,25, 20,20,15,15,
   25,25,25,25,25,25,25,25,25,25, 20,20,15,15,
 ];
+function writeSegments(segments, sessionId, task) {
+  segments.forEach(seg => {
+    const d1 = new Date(seg.start), d2 = new Date(seg.end);
+    if (localDate(d1) !== localDate(d2)) {
+      const mid = new Date(localDate(d2) + 'T00:00:00').getTime();
+      stats.sessionHistory.push({ date: localDate(d1), timestamp: mid, duration: Math.round((mid - seg.start) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
+      stats.sessionHistory.push({ date: localDate(d2), timestamp: seg.end, duration: Math.round((seg.end - mid) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
+    } else {
+      stats.sessionHistory.push({ date: localDate(d1), timestamp: seg.end, duration: seg.duration, task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
+    }
+  });
+}
+
 function tryCardDrop() {
   let data = JSON.parse(localStorage.getItem('pomodoro_cards')||'{}');
   // 权重随机选择
@@ -2237,9 +2250,7 @@ function timerComplete() {
       state.pomodoros++; stats.today++; stats.total++;
       const task = taskInput.value.trim() || '未命名任务';
       const date = localDate(new Date());
-      state._segments.forEach(s => {
-        stats.sessionHistory.push({ date, timestamp: s.end, duration: s.duration, task, mode: 'countdown', sessionId: state._sessionId });
-      });
+      writeSegments(state._segments, state._sessionId, task);
       addTimeToTodoTask(task, state.total);
       saveData();
       renderTodo();
@@ -2288,12 +2299,7 @@ function stopCountUp() {
       state.pomodoros++; stats.today++; stats.total++;
       // 按实际时间段写入多条记录
       const task = taskInput.value.trim() || '未命名任务';
-      const date = localDate(new Date());
-      state._segments.forEach(seg => {
-        stats.sessionHistory.push({
-          date, timestamp: seg.end, duration: seg.duration, task, mode: 'countup', sessionId: state._sessionId
-        });
-      });
+      writeSegments(state._segments, state._sessionId, task);
       addTimeToTodoTask(task, elapsed);
       saveData();
       renderTodo();
@@ -2436,10 +2442,7 @@ function _stopSave() {
       if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
       state.pomodoros++; stats.today++; stats.total++;
       const task = taskInput.value.trim() || '未命名任务';
-      const date = localDate(new Date());
-      state._segments.forEach(s => {
-        stats.sessionHistory.push({ date, timestamp: s.end, duration: s.duration, task, mode: 'countdown', sessionId: state._sessionId });
-      });
+      writeSegments(state._segments, state._sessionId, task);
       addTimeToTodoTask(task, elapsed);
       saveData(); renderTodo();
       showToast(`已结束 用时${formatTime(elapsed)}`);
