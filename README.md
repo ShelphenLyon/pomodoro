@@ -20,8 +20,10 @@
 - 倒计时数字点击直达计时设置
 - 桌面通知 + 提示音
 - 休息结束不自动开始专注
+- 专注时段跨午夜自动拆分记录
+- 塔罗牌掉落收集系统：78 张 Rider-Waite 卡牌，分层权重，品质光晕，卡面图鉴，牌义解读
+- 数据导出/导入
 - localStorage 持久化
-- 键盘快捷键
 
 ## 使用
 
@@ -29,7 +31,7 @@
 git clone https://github.com/ShelphenLyon/pomodoro.git
 ```
 
-浏览器打开 `pomodoro.html`。
+浏览器打开 `pomodoro.html`。卡牌收集页面打开 `cards.html`。
 
 ## 操作
 
