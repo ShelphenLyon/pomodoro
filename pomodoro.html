@@ -2031,9 +2031,13 @@ function writeSegments(segments, sessionId, task) {
   segments.forEach(seg => {
     const d1 = new Date(seg.start), d2 = new Date(seg.end);
     if (localDate(d1) !== localDate(d2)) {
-      const mid = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
-      stats.sessionHistory.push({ date: localDate(d1), timestamp: mid, duration: Math.round((mid - seg.start) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId: '' });
-      stats.sessionHistory.push({ date: localDate(d2), timestamp: seg.end, duration: Math.round((seg.end - mid) / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
+      const intoDay = d1.getHours()*3600000 + d1.getMinutes()*60000 + d1.getSeconds()*1000 + d1.getMilliseconds();
+      const remain = 86400000 - intoDay;
+      const dur1ms = Math.min(remain, seg.duration * 1000);
+      const dur2ms = seg.duration * 1000 - dur1ms;
+      const mid = seg.start + dur1ms;
+      stats.sessionHistory.push({ date: localDate(d1), timestamp: mid, duration: Math.round(dur1ms / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId: '' });
+      stats.sessionHistory.push({ date: localDate(d2), timestamp: seg.end, duration: Math.round(dur2ms / 1000), task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
     } else {
       stats.sessionHistory.push({ date: localDate(d1), timestamp: seg.end, duration: seg.duration, task, mode: state.countUp ? 'countup' : 'countdown', sessionId });
     }
