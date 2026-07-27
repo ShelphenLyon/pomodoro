@@ -51,6 +51,7 @@ body::after {
 .modal-card.mt3 { border-color:var(--gold); box-shadow:0 0 40px rgba(201,168,76,0.35); }
 .modal-card.mt4 { border-color:#d44; box-shadow:0 0 40px rgba(221,68,68,0.4); }
 .modal-card.mt5 { border-color:var(--gold); box-shadow:0 0 50px rgba(255,255,255,0.3); animation:rainbow-border 2s linear infinite; }
+.modal-card.mt6 { border-color:#91828f; box-shadow:0 0 30px rgba(145,130,143,0.3); }
 @keyframes rainbow-border {
   0%   { border-color:#f44; box-shadow:0 0 40px rgba(255,68,68,0.4); }
   25%  { border-color:#fa0; box-shadow:0 0 40px rgba(255,170,0,0.4); }
@@ -136,6 +137,10 @@ h1 {
 }
 .card.t5 { animation:rainbow-dim 4s linear infinite; }
 .card.t5.owned { animation:rainbow 4s linear infinite; }
+.card.t6 { border-color:#91828f; }
+.card.locked.t6 { border-color:#4a3f48; }
+.card.t6.owned { box-shadow:0 0 28px rgba(145,130,143,0.45), 0 0 10px rgba(130,115,128,0.35), inset 0 0 14px rgba(130,115,128,0.1); }
+.card.t6.owned:hover { box-shadow:0 0 40px rgba(160,150,158,0.6), 0 0 16px rgba(145,130,143,0.45); }
 .card-icon { font-size:22px; color:var(--gold); margin-bottom:4px; z-index:1; min-height:28px; display:flex; align-items:center; }
 .card-img { width:100%; height:100%; object-fit:cover; border-radius:4px; position:absolute; inset:0; z-index:0; }
 .card-back { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -207,7 +212,8 @@ const ALL_CARDS = [
 const MAJOR_COUNT = 22;
 function getTier(idx) {
   if (idx === 0 || idx === 21) return 5; // Fool, World: rainbow
-  if ([10,13,15,16].includes(idx)) return 4; // Wheel, Death, Devil, Tower: red
+  if ([10,19].includes(idx)) return 4; // Wheel, Sun: red
+  if ([13,15,16].includes(idx)) return 6; // Death, Devil, Tower: obsidian
   if (idx < 22) return 3; // other Major: gold
   const r = (idx - 22) % 14;
   if (r < 10) return 0; // Number: green
@@ -270,7 +276,7 @@ function render() {
       const tier = idx >= 0 ? getTier(idx) : 0;
       const mc = document.querySelector('#cardModal .modal-card');
       mc.className = 'modal-card mt' + tier;
-      const TEXT_COLORS = ['#4a5','#48d','#c8f','var(--gold)','#f66','#fff'];
+      const TEXT_COLORS = ['#4a5','#48d','#c8f','var(--gold)','#f66','#fff','#91828f'];
       document.getElementById('modalName').textContent = name;
       document.getElementById('modalName').style.color = TEXT_COLORS[tier];
       document.getElementById('modalCount').style.color = TEXT_COLORS[tier];
