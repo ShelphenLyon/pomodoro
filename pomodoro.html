@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
 <title>🍅 番茄钟</title>
 <style>
   :root {
@@ -2039,7 +2040,25 @@ function tryCardDrop() {
   showToast(`Obtained: ${ALL_CARDS[idx]}`);
 }
 
-$('#btnCards').addEventListener('click', () => { window.open('cards.html', '_blank'); });
+$('#btnCards').addEventListener('click', () => {
+  let f = document.getElementById('cardsFrame');
+  if (!f) {
+    f = document.createElement('iframe');
+    f.id = 'cardsFrame';
+    f.src = 'cards.html';
+    Object.assign(f.style, {position:'fixed',top:0,left:0,width:'100vw',height:'100vh',border:'none',zIndex:999,background:'#100b1a'});
+    document.body.appendChild(f);
+  } else {
+    f.style.display = f.style.display === 'none' ? '' : '';
+    f.src = f.src; // reload
+  }
+});
+window.addEventListener('message', e => {
+  if (e.data === 'hideCards') {
+    const f = document.getElementById('cardsFrame');
+    if (f) f.style.display = 'none';
+  }
+});
 
 // 导出导入数据
 $('#exportAll').addEventListener('click', () => {

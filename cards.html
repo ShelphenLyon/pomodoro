@@ -11,6 +11,17 @@
   --accent: #8b1a4a; --gold: #c9a84c; --purple: #5b2d8e;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
+.back-btn {
+  position:fixed; top:16px; left:16px; z-index:300;
+  color:var(--gold); font-size:12px; letter-spacing:2px; cursor:pointer;
+  padding:6px 14px; border:1px solid rgba(201,168,76,0.2); border-radius:3px;
+  transition:all 0.3s; font-family:inherit;
+}
+.back-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.1); }
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:rgba(13,13,26,0.5); border-radius:2px; }
+::-webkit-scrollbar-thumb { background:linear-gradient(180deg, rgba(201,168,76,0.4), rgba(139,26,74,0.4)); border-radius:2px; }
+::-webkit-scrollbar-thumb:hover { background:linear-gradient(180deg, rgba(201,168,76,0.6), rgba(139,26,74,0.6)); }
 body {
   font-family:'Cinzel','Georgia',serif;
   background:var(--bg);
@@ -171,6 +182,7 @@ h1 {
 </style>
 </head>
 <body>
+<div class="back-btn" id="backBtn" title="Return to Pomodoro">← Back</div>
 <h1>THE ARCANUM</h1>
 <div class="subtitle">TAROT COLLECTION</div>
 <div class="stats-bar">
@@ -303,6 +315,9 @@ function render() {
   });
 }
 render();
+document.getElementById('backBtn').addEventListener('click', () => {
+  window.parent.postMessage('hideCards', '*');
+});
 // 掉落记录弹窗
 document.getElementById('logBtn').addEventListener('click', () => {
   const data = loadCards();
