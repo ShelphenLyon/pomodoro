@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>(function(){var b={red:'#1a1a2e',sky:'#dceefb',mint:'#d5f0df',cream:'#fdf0dc',lavender:'#e8dcf2',rose:'#fce4ec'};try{var d=JSON.parse(localStorage['pomodoro_data']||'{}');document.documentElement.style.background=b[d.settings&&d.settings.theme]||'#1a1a2e'}catch(e){document.documentElement.style.background='#1a1a2e'}})()</script>
-<style>html,body{margin:0;overflow:hidden;height:100%}</style>
+<style>html,body{margin:0}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1a1a2e">
 <link rel="preload" as="font" href="https://fonts.gstatic.com/s/cinzel/v19/8vIJ7ww63mVu7gt7-mTqPkRXM8Xg.woff2" crossorigin>
@@ -44,7 +44,6 @@
     align-items: center;
     justify-content: center;
     user-select: none;
-    overflow: hidden;
     -webkit-user-select: none;
     position: relative;
   }
@@ -1059,7 +1058,7 @@
     flex: 1;
     display: flex; flex-direction: column;
     padding: 0 12px 16px;
-    overflow: hidden;
+    overflow-y: auto;
   }
 
   /* 抽屉内任务样式 */
@@ -1276,7 +1275,7 @@
   .drawer-right-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 20px 16px 16px;
-    overflow: hidden;
+    overflow-y: auto;
   }
 
   .right-clock {
@@ -3192,6 +3191,34 @@ function updateClock() {
 }
 setInterval(updateClock, 1000);
 updateClock();
+
+// 抽屉标签拖拽（位置持久化）
+try { drawerTab.style.top = (localStorage.getItem('pomodoro_drawerTop') || '80px'); } catch(e) {}
+try { drawerRightTab.style.top = (localStorage.getItem('pomodoro_drawerRightTop') || '80px'); } catch(e) {}
+[{tab:drawerTab, key:'pomodoro_drawerTop'}, {tab:drawerRightTab, key:'pomodoro_drawerRightTop'}].forEach(({tab, key}) => {
+  let dragging = false, startY, startTop;
+  tab.addEventListener('mousedown', e => {
+    dragging = true; startY = e.clientY; startTop = parseInt(tab.style.top) || 80;
+    e.preventDefault();
+  });
+  tab.addEventListener('touchstart', e => {
+    dragging = true; startY = e.touches[0].clientY; startTop = parseInt(tab.style.top) || 80;
+  }, {passive: false});
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const top = Math.max(0, Math.min(window.innerHeight - 80, startTop + e.clientY - startY));
+    tab.style.top = top + 'px';
+    try { localStorage.setItem(key, top + 'px'); } catch(e) {}
+  });
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const top = Math.max(0, Math.min(window.innerHeight - 80, startTop + e.touches[0].clientY - startY));
+    tab.style.top = top + 'px';
+    try { localStorage.setItem(key, top + 'px'); } catch(e) {}
+  }, {passive: false});
+  document.addEventListener('mouseup', () => { dragging = false; });
+  document.addEventListener('touchend', () => { dragging = false; });
+});
 
 // 右侧抽屉开关
 drawerRightTab.addEventListener('click', (e) => {
