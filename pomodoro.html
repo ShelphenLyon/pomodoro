@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" style="background:#1a1a2e">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +9,9 @@
 <style>
   html, body { background:#1a1a2e; margin:0; overflow:hidden; height:100%; } /* 阻止CSS加载前白闪 */
 </style>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap"></noscript>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
   :root {
     --bg: #1a1a2e;
     --card-bg: #16213e;
@@ -80,6 +81,7 @@
     text-align: center;
     width: 420px;
     position: relative;
+    z-index: 0;
   }
 
   /* ── 模式切换标签 ── */
