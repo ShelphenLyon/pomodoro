@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>(function(){var b={red:'#1a1a2e',sky:'#dceefb',mint:'#d5f0df',cream:'#fdf0dc',lavender:'#e8dcf2',rose:'#fce4ec'};try{var d=JSON.parse(localStorage['pomodoro_data']||'{}');document.documentElement.style.background=b[d.settings&&d.settings.theme]||'#1a1a2e'}catch(e){document.documentElement.style.background='#1a1a2e'}})()</script>
-<style>html,body{margin:0}</style>
+<style>html,body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1a1a2e">
 <link rel="preload" as="font" href="https://fonts.gstatic.com/s/cinzel/v19/8vIJ7ww63mVu7gt7-mTqPkRXM8Xg.woff2" crossorigin>
@@ -2097,7 +2097,7 @@ $('#importFile').addEventListener('change', function() {
       if (d.memo) localStorage.setItem('pomodoro_memo', d.memo);
       if (d.rightWidth) localStorage.setItem('pomodoro_rightWidth', d.rightWidth);
       if (d.task) localStorage.setItem('pomodoro_task', d.task);
-      location.reload();
+      location.replace(location.href);
     } catch(e) { alert('文件格式错误'); }
   };
   reader.readAsText(file);
