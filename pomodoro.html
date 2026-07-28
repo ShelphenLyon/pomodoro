@@ -2055,7 +2055,7 @@ $('#btnCards').addEventListener('click', () => {
     f = document.createElement('iframe');
     f.id = 'cardsFrame';
     f.src = 'cards.html';
-    Object.assign(f.style, {position:'fixed',top:0,left:0,width:'100vw',height:'100vh',border:'none',zIndex:999,background:'#100b1a'});
+    Object.assign(f.style, {position:'fixed',top:0,left:0,width:'100vw',height:'100vh',border:'none',zIndex:999,background:'#100b1a',overscrollBehavior:'contain',touchAction:'pan-y'});
     document.body.appendChild(f);
   } else {
     f.style.display = f.style.display === 'none' ? '' : '';
