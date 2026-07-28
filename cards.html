@@ -314,6 +314,12 @@ function render() {
     if (e.target === this) this.classList.remove('show');
   });
 }
+let _tsY = 0;
+document.addEventListener('touchstart', e => { _tsY = e.touches[0].clientY; }, {passive: true});
+document.addEventListener('touchmove', e => {
+  const dy = e.touches[0].clientY - _tsY;
+  if (document.scrollingElement.scrollTop <= 0 && dy > 0) e.preventDefault();
+}, {passive: false});
 render();
 document.getElementById('backBtn').addEventListener('click', () => {
   window.parent.postMessage('hideCards', '*');
