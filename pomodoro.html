@@ -3992,7 +3992,15 @@ let _touchStartY = 0;
 document.addEventListener('touchstart', e => { _touchStartY = e.touches[0].clientY; }, {passive: true});
 document.addEventListener('touchmove', e => {
   const dy = e.touches[0].clientY - _touchStartY;
-  if (document.scrollingElement.scrollTop <= 0 && dy > 0) e.preventDefault();
+  if (dy <= 0) return;
+  // 检查触摸点是否在可滚动的子元素内
+  let el = e.target;
+  while (el && el !== document.body) {
+    const s = getComputedStyle(el);
+    if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollTop > 0) return;
+    el = el.parentElement;
+  }
+  if (document.scrollingElement.scrollTop <= 0) e.preventDefault();
 }, {passive: false});
 
 // Escape 关闭面板/抽屉
