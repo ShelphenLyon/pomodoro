@@ -325,7 +325,7 @@ document.addEventListener('touchmove', e => {
     if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollTop > 0) return;
     el = el.parentElement;
   }
-  e.preventDefault();
+  if (document.scrollingElement.scrollTop <= 0) e.preventDefault();
 }, {passive: false});
 render();
 document.getElementById('backBtn').addEventListener('click', () => {
