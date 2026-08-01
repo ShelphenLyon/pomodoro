@@ -2429,7 +2429,7 @@ btnReset.addEventListener('click', resetTimer);
 btnSkip.addEventListener('click', skipTimer);
 
 // 长按结束保存，短按暂停（环形进度指示）
-let _pressTimer = null, _longFired = false, _wasIdle = false;
+let _pressTimer = null, _longFired = false, _wasIdle = false, _pressTime = 0;
 const _ring = document.querySelector('.btn-ring circle');
 function _stopSave() {
   clearHydration();
@@ -2489,13 +2489,19 @@ function _stopSave() {
   _ring.setAttribute('stroke-dashoffset', '194.8');
 }
 btnMain.addEventListener('mousedown', () => {
+  clearTimeout(_pressTimer); _pressTimer = null;
   _wasIdle = state.status === 'idle';
   if (_wasIdle) { toggleTimer(); return; }
   _longFired = false;
+  _pressTime = Date.now();
   _ring.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--accent-work').trim());
   _ring.style.transition = 'stroke-dashoffset 1s linear';
   _ring.setAttribute('stroke-dashoffset', '0');
-  _pressTimer = setTimeout(() => { _stopSave(); _longFired = true; _pressTimer = null; }, 1000);
+  _pressTimer = setTimeout(() => {
+    // 只有距离最近一次 mousedown 超过 900ms 才算真正长按（防御孤儿定时器）
+    if (Date.now() - _pressTime < 900) return;
+    _stopSave(); _longFired = true; _pressTimer = null;
+  }, 1000);
 });
 btnMain.addEventListener('mouseup', () => {
   if (_longFired) { _longFired = false; return; }
@@ -2511,8 +2517,9 @@ btnMain.addEventListener('mouseleave', () => {
     _ring.setAttribute('stroke-dashoffset', '194.8');
   }
 });
-btnMain.addEventListener('touchstart', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mousedown')); });
+btnMain.addEventListener('touchstart', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mousedown')); }, {passive: false});
 btnMain.addEventListener('touchend', (e) => { e.preventDefault(); btnMain.dispatchEvent(new Event('mouseup')); });
+btnMain.addEventListener('touchcancel', (e) => { btnMain.dispatchEvent(new Event('mouseup')); });
 
 // 点击倒计时数字 → 打开计时设置
 timerTime.addEventListener('click', () => {
