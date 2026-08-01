@@ -2140,6 +2140,7 @@ function resetTimerForMode(mode) {
 function startTimer() {
   if (state.status === 'idle') {
     state.status = 'running';
+    state._lastDropSec = Math.floor(Date.now() / 1000);
     if (state.countUp) {
       state.remaining = 0;
       state.total = 60 * 60;
@@ -2179,6 +2180,7 @@ function startTimer() {
 }
 
 function pauseTimer() {
+  clearHydration();
   state.status = 'paused';
   clearInterval(timerInterval);
   timerInterval = null;
@@ -2209,10 +2211,17 @@ function toggleTimer() {
 function tick() {
   const now = Date.now();
   const thisSec = Math.floor(now / 1000);
-  if (state.mode === 'work' && thisSec !== state._lastDropSec) {
-    state._lastDropSec = thisSec;
-    if (Math.random() * 100 < 0.2) {
-      tryCardDrop();
+  if (state.mode === 'work') {
+    const missed = thisSec - state._lastDropSec;
+    if (missed > 0) {
+      // 补跑因后台节流错过的每秒掉卡检测，上限 1 小时防止异常
+      const toCheck = missed > 3600 ? 3600 : missed;
+      for (let s = 0; s < toCheck; s++) {
+        if (Math.random() * 100 < 0.25) {
+          tryCardDrop();
+        }
+      }
+      state._lastDropSec = thisSec;
     }
   }
 
@@ -2242,6 +2251,7 @@ function tick() {
 }
 
 function timerComplete() {
+  clearHydration();
   clearInterval(timerInterval);
   timerInterval = null;
   timerEndTime = null;
@@ -2290,6 +2300,7 @@ function timerComplete() {
 }
 
 function stopCountUp() {
+  clearHydration();
   const elapsed = state.remaining;
   // 记录最后一段
   const segEnd = Date.now();
@@ -2421,6 +2432,7 @@ btnSkip.addEventListener('click', skipTimer);
 let _pressTimer = null, _longFired = false, _wasIdle = false;
 const _ring = document.querySelector('.btn-ring circle');
 function _stopSave() {
+  clearHydration();
   if (state.countUp) {
     stopCountUp();
     _ring.style.transition = 'none';
@@ -2825,6 +2837,20 @@ document.addEventListener('click', () => {
 
 let lastHydrationTrigger = 0;
 
+// 清除补水提醒状态，恢复计时器显示
+function clearHydration() {
+  if (!state.hydrationActive) return;
+  clearTimeout(hydrationRestoreTimer);
+  hydrationRestoreTimer = null;
+  state.hydrationActive = false;
+  timerTime.style.fontSize = '';
+  timerLabel.style.color = '';
+  timerLabel.style.fontSize = '';
+  timerLabel.style.fontWeight = '';
+  updateTimerDisplay();
+  updateLabel();
+}
+
 function triggerHydration() {
   lastHydrationTrigger = Date.now();
 
@@ -2859,14 +2885,7 @@ function triggerHydration() {
   // ── 5 秒后恢复计时器显示 ──
   clearTimeout(hydrationRestoreTimer);
   hydrationRestoreTimer = setTimeout(() => {
-    state.hydrationActive = false;
-    timerTime.style.fontSize = '';
-    timerLabel.style.color = '';
-    timerLabel.style.fontSize = '';
-    timerLabel.style.fontWeight = '';
-    updateTimerDisplay();
-    updateLabel();
-    // 恢复页面标题
+    clearHydration();
     if (state.status === 'idle') {
       document.title = '🍅 番茄钟';
     }
