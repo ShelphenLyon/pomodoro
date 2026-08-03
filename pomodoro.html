@@ -1384,6 +1384,158 @@
     transition: opacity 0.8s;
   }
   .bg-video-overlay.show { opacity: 1; }
+
+  /* ── 计时功能区 ── */
+  .mode-tab { position: relative; }
+  .mode-tab.timer.active { background: var(--accent-up); }
+  .mode-tab .tab-run-dot {
+    position: absolute; top: 4px; right: 8px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent-up);
+    box-shadow: 0 0 6px var(--accent-up);
+    display: none;
+    animation: ttPulse 1.2s ease-in-out infinite;
+  }
+  .mode-tab.has-running .tab-run-dot { display: block; }
+  @keyframes ttPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* 计时视图下隐藏番茄钟组件 */
+  .app.timer-view .countup-row,
+  .app.timer-view .task-input-wrap,
+  .app.timer-view .timer-ring-container,
+  .app.timer-view .controls,
+  .app.timer-view .pomodoro-dots,
+  .app.timer-view .hint { display: none; }
+
+  .tt-panel { display: none; text-align: left; }
+  .app.timer-view .tt-panel { display: block; }
+
+  .tt-add-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tt-input {
+    flex: 1; min-width: 0;
+    padding: 9px 14px;
+    border-radius: 18px;
+    border: 1px solid #2a3a5a;
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .tt-input:focus { border-color: rgba(243,156,18,0.5); }
+  .tt-input::placeholder { color: #555; }
+  .tt-min { width: 64px; flex: none; text-align: center; padding: 9px 6px; }
+  .tt-min::-webkit-outer-spin-button,
+  .tt-min::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .tt-min { -moz-appearance: textfield; appearance: textfield; }
+  .tt-add-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: none; background: var(--accent-up); color: #fff;
+    font-size: 18px; cursor: pointer; flex-shrink: 0;
+    transition: filter 0.2s;
+  }
+  .tt-add-btn:hover { filter: brightness(1.15); }
+
+  .tt-sub-row { margin-bottom: 10px; }
+  .tt-parent-hint {
+    font-size: 11px; color: var(--accent-up);
+    display: block; padding: 0 4px 6px;
+  }
+
+  .tt-list {
+    list-style: none;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .tt-list::-webkit-scrollbar { width: 3px; }
+  .tt-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  .tt-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 8px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+  .tt-item:hover { background: rgba(255,255,255,0.04); }
+  .tt-item.sub { padding-left: 32px; }
+  .tt-item.sub::before {
+    content: '└';
+    position: absolute; left: 14px;
+    color: #555; font-size: 14px;
+  }
+  .tt-item.running {
+    background: var(--input-bg);
+    outline: 1px solid rgba(243,156,18,0.35);
+  }
+  .tt-progress {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 0;
+    background: rgba(243,156,18,0.12);
+    pointer-events: none;
+    transition: width 0.4s linear;
+  }
+
+  .tt-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+    font-size: 11px;
+    color: transparent;
+  }
+  .tt-check.done {
+    border-color: var(--accent-short);
+    background: var(--accent-short);
+    color: #fff;
+  }
+
+  .tt-name {
+    flex: 1; min-width: 0;
+    font-size: 13px;
+    word-break: break-word;
+    transition: all 0.3s;
+  }
+  .tt-name.done { text-decoration: line-through; color: #555; }
+
+  .tt-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    flex-shrink: 0;
+  }
+  .tt-time.running { color: var(--accent-up); font-weight: 700; font-size: 14px; }
+
+  .tt-btn {
+    width: 24px; height: 24px;
+    border: none; background: transparent;
+    color: #555; border-radius: 50%;
+    cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: all 0.2s;
+  }
+  .tt-item:hover .tt-btn { opacity: 1; }
+  .tt-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .tt-btn.always { opacity: 1; }
+  .tt-btn.tt-play { color: var(--accent-up); font-size: 12px; }
+  .tt-btn.tt-del:hover { color: var(--accent-work); background: rgba(231,76,60,0.15); }
+
+  .tt-item .tt-input { padding: 6px 10px; font-size: 12px; }
+  .tt-item .tt-min { width: 56px; }
+
+  .tt-foot {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
 </style>
 </head>
 <body>
@@ -1447,6 +1599,27 @@
     <button class="mode-tab work active" data-mode="work">专注</button>
     <button class="mode-tab short" data-mode="short">短休</button>
     <button class="mode-tab long" data-mode="long">长休</button>
+    <button class="mode-tab timer" data-mode="timer">计时<span class="tab-run-dot"></span></button>
+  </div>
+
+  <!-- 计时功能区 -->
+  <div class="tt-panel" id="ttPanel">
+    <div class="tt-add-row">
+      <input class="tt-input" id="ttAddName" placeholder="添加计时任务..." maxlength="30">
+      <input class="tt-input tt-min" id="ttAddMin" type="number" min="1" max="999" placeholder="分钟">
+      <button class="tt-add-btn" id="ttAddBtn" title="添加大任务">+</button>
+    </div>
+    <div class="tt-sub-row" id="ttSubRow" style="display:none">
+      <span class="tt-parent-hint" id="ttParentHint"></span>
+      <div class="tt-add-row" style="margin-bottom:0">
+        <input class="tt-input" id="ttSubName" placeholder="小任务名..." maxlength="30">
+        <input class="tt-input tt-min" id="ttSubMin" type="number" min="1" max="999" placeholder="分钟">
+        <button class="tt-add-btn" id="ttSubBtn" title="添加小任务">+</button>
+        <button class="tt-add-btn" id="ttSubCancel" title="取消" style="background:var(--btn-bg);color:var(--text-secondary)">×</button>
+      </div>
+    </div>
+    <ul class="tt-list" id="ttList"></ul>
+    <div class="tt-foot">大任务时长 = 小任务时长之和 · 同时只运行一个计时</div>
   </div>
 
   <!-- 正向计时开关 -->
@@ -1754,6 +1927,7 @@ let stats = {
   date: '',               // YYYY-MM-DD，用于判断是否新的一天
   sessionHistory: [],     // [{ date, timestamp, duration, task, mode }]
   todoList: [],           // [{ id, text, done, date }]
+  timerTasks: [],         // 计时功能区 [{ id, text, seconds, done, parentId }]
 };
 
 // ═══════════════════════════════════════════
@@ -1769,6 +1943,7 @@ function loadData() {
         // 迁移旧数据：如果没有以下字段，初始化为空
         if (!data.stats.sessionHistory) data.stats.sessionHistory = [];
         if (!data.stats.todoList) data.stats.todoList = [];
+        if (!data.stats.timerTasks) data.stats.timerTasks = [];
         // 迁移旧 todo 数据：添加缺失字段
         data.stats.todoList.forEach(t => {
           if (t.totalSeconds === undefined) t.totalSeconds = 0;
@@ -1936,7 +2111,8 @@ function updateTimerDisplay() {
 
 function updateModeTabs() {
   modeTabs.querySelectorAll('.mode-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.mode === state.mode);
+    const active = timerViewOpen ? tab.dataset.mode === 'timer' : tab.dataset.mode === state.mode;
+    tab.classList.toggle('active', active);
   });
 }
 
@@ -2532,6 +2708,8 @@ timerTime.addEventListener('click', () => {
 modeTabs.addEventListener('click', (e) => {
   const tab = e.target.closest('.mode-tab');
   if (!tab) return;
+  if (tab.dataset.mode === 'timer') { openTimerView(); return; }
+  closeTimerView();
   switchMode(tab.dataset.mode);
 });
 
@@ -3206,6 +3384,351 @@ drawerTodoList.addEventListener('click', (e) => {
   else if (action === 'subadd') { e.stopPropagation(); showAddRow(id); }
   else selectTodoItem(id); // 点击任务主体 → 选中
 });
+
+// ═══════════════════════════════════════════
+// 计时功能区（大任务 / 小任务，大任务时长 = 小任务之和）
+// ═══════════════════════════════════════════
+const ttPanel      = $('#ttPanel');
+const ttList       = $('#ttList');
+const ttAddName    = $('#ttAddName');
+const ttAddMin     = $('#ttAddMin');
+const ttAddBtn     = $('#ttAddBtn');
+const ttSubRow     = $('#ttSubRow');
+const ttSubName    = $('#ttSubName');
+const ttSubMin     = $('#ttSubMin');
+const ttSubBtn     = $('#ttSubBtn');
+const ttSubCancel  = $('#ttSubCancel');
+const ttParentHint = $('#ttParentHint');
+
+let timerViewOpen = false;   // 是否处于计时视图
+let ttSubParentId = null;    // 正在为其添加小任务的大任务 ID
+let ttEditingId   = null;    // 正在编辑的任务 ID
+let ttActive      = null;    // 运行中的计时 { id, total, remaining, endTime, paused, interval }
+
+function ttChildren(pid) { return stats.timerTasks.filter(t => t.parentId === pid); }
+
+// 大任务时长 = 小任务之和；无小任务时用自身时长
+function ttSeconds(t) {
+  if (!t.parentId) {
+    const ch = ttChildren(t.id);
+    if (ch.length) return ch.reduce((s, c) => s + (c.seconds || 0), 0);
+  }
+  return t.seconds || 0;
+}
+
+// 可独立运行的：小任务，或没有小任务的大任务
+function ttRunnable(t) {
+  return !!t.parentId || ttChildren(t.id).length === 0;
+}
+
+// 小任务全部完成 → 大任务自动打勾；任一未完成 → 大任务取消
+function ttSyncParent() {
+  stats.timerTasks.filter(t => !t.parentId).forEach(p => {
+    const ch = ttChildren(p.id);
+    if (!ch.length) return;
+    p.done = ch.every(c => c.done);
+  });
+}
+
+function renderTimerTasks() {
+  const tab = modeTabs.querySelector('.mode-tab.timer');
+  if (tab) tab.classList.toggle('has-running', !!ttActive);
+
+  const parents = stats.timerTasks.filter(t => !t.parentId);
+  if (!parents.length) {
+    ttList.innerHTML = '<li class="drawer-empty">暂无计时任务，添加一个吧 ⏱</li>';
+    return;
+  }
+  const sortFn = (a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0);
+  parents.sort(sortFn);
+  let html = '';
+  parents.forEach(p => {
+    html += ttItemHtml(p, false);
+    const subs = ttChildren(p.id);
+    subs.sort(sortFn);
+    subs.forEach(s => { html += ttItemHtml(s, true); });
+  });
+  ttList.innerHTML = html;
+}
+
+function ttItemHtml(t, isSub) {
+  const isRunning = ttActive && ttActive.id === t.id;
+  const sec = ttSeconds(t);
+
+  // 编辑态
+  if (ttEditingId === t.id) {
+    const derived = !t.parentId && ttChildren(t.id).length > 0; // 时长由小任务求和，不可编辑
+    return `
+    <li class="tt-item${isSub ? ' sub' : ''}" data-id="${t.id}">
+      <input class="tt-input tt-edit-name" value="${escapeHtml(t.text).replace(/"/g, '&quot;')}" maxlength="30">
+      ${derived ? '' : `<input class="tt-input tt-min tt-edit-min" type="number" min="1" max="999" value="${Math.round((t.seconds || 0) / 60)}" placeholder="分钟">`}
+      <button class="tt-btn always" data-action="saveedit" title="保存" style="color:var(--accent-short)">✓</button>
+      <button class="tt-btn always" data-action="canceledit" title="取消">×</button>
+    </li>`;
+  }
+
+  let timeHtml, progressHtml = '';
+  if (isRunning) {
+    timeHtml = `<span class="tt-time running" data-tt-time>${formatTime(ttActive.remaining)}</span>`;
+    const pct = ttActive.total > 0 ? (1 - ttActive.remaining / ttActive.total) * 100 : 0;
+    progressHtml = `<div class="tt-progress" style="width:${pct}%"></div>`;
+  } else {
+    timeHtml = `<span class="tt-time">${sec > 0 ? formatDurationShort(sec) : '—'}</span>`;
+  }
+
+  let btns = '';
+  if (isRunning) {
+    btns += `<button class="tt-btn always tt-play" data-action="pauseresume" title="${ttActive.paused ? '继续' : '暂停'}">${ttActive.paused ? '▶' : '⏸'}</button>`;
+    btns += `<button class="tt-btn always" data-action="stop" title="停止">⏹</button>`;
+  } else {
+    if (ttRunnable(t)) btns += `<button class="tt-btn always tt-play" data-action="play" title="开始">▶</button>`;
+    if (!isSub) btns += `<button class="tt-btn" data-action="subadd" title="添加小任务">＋</button>`;
+    btns += `<button class="tt-btn" data-action="edit" title="编辑">✎</button>`;
+  }
+  btns += `<button class="tt-btn tt-del" data-action="delete" title="删除">×</button>`;
+
+  return `
+    <li class="tt-item${isSub ? ' sub' : ''}${isRunning ? ' running' : ''}" data-id="${t.id}">
+      ${progressHtml}
+      <div class="tt-check${t.done ? ' done' : ''}" data-action="toggle">${t.done ? '✓' : ''}</div>
+      <div class="tt-name${t.done ? ' done' : ''}">${escapeHtml(t.text)}</div>
+      ${timeHtml}
+      ${btns}
+    </li>`;
+}
+
+// ── 添加 ──
+function ttAdd() {
+  const text = ttAddName.value.trim();
+  if (!text) return;
+  const min = parseInt(ttAddMin.value) || 0;
+  stats.timerTasks.push({ id: generateId(), text, seconds: Math.max(0, min) * 60, done: false, parentId: null });
+  ttAddName.value = ''; ttAddMin.value = '';
+  saveData();
+  renderTimerTasks();
+  ttAddName.focus();
+}
+
+function ttSubAdd() {
+  const text = ttSubName.value.trim();
+  if (!text || !ttSubParentId) return;
+  const min = parseInt(ttSubMin.value) || 0;
+  if (min <= 0) { showToast('⚠️ 请填写分钟数'); return; }
+  stats.timerTasks.push({ id: generateId(), text, seconds: min * 60, done: false, parentId: ttSubParentId });
+  ttSubName.value = ''; ttSubMin.value = '';
+  ttSyncParent(); // 新小任务未完成 → 大任务取消勾选
+  saveData();
+  renderTimerTasks();
+  ttSubName.focus();
+}
+
+function ttShowSubRow(pid) {
+  ttSubParentId = pid;
+  const p = stats.timerTasks.find(t => t.id === pid);
+  ttParentHint.textContent = '└ 添加到：' + (p ? p.text : '');
+  ttSubRow.style.display = 'block';
+  ttSubName.focus();
+}
+
+function ttHideSubRow() {
+  ttSubRow.style.display = 'none';
+  ttSubParentId = null;
+}
+
+// ── 勾选 ──
+function ttToggle(id) {
+  const t = stats.timerTasks.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  // 勾选大任务 → 所有小任务同步
+  if (!t.parentId) ttChildren(t.id).forEach(c => { c.done = t.done; });
+  ttSyncParent();
+  saveData();
+  renderTimerTasks();
+}
+
+// ── 编辑 ──
+function ttSaveEdit(id) {
+  const li = ttList.querySelector(`li[data-id="${id}"]`);
+  const t = stats.timerTasks.find(x => x.id === id);
+  if (!li || !t) { ttEditingId = null; return; }
+  const nameEl = li.querySelector('.tt-edit-name');
+  const minEl = li.querySelector('.tt-edit-min');
+  const name = nameEl.value.trim();
+  if (name) t.text = name;
+  if (minEl) {
+    const min = parseInt(minEl.value) || 0;
+    t.seconds = Math.max(0, min) * 60;
+  }
+  ttEditingId = null;
+  saveData();
+  renderTimerTasks();
+}
+
+// ── 删除 ──
+function ttDelete(id) {
+  const t = stats.timerTasks.find(x => x.id === id);
+  if (!t) return;
+  const hasCh = stats.timerTasks.some(x => x.parentId === id);
+  const msg = hasCh ? `确定删除「${t.text}」及其所有小任务吗？` : `确定删除「${t.text}」吗？`;
+  if (!confirm(msg)) return;
+
+  // 删除运行中的任务（或其大任务）→ 先停止计时
+  if (ttActive) {
+    const activeTask = stats.timerTasks.find(x => x.id === ttActive.id);
+    if (ttActive.id === id || (activeTask && activeTask.parentId === id)) ttStop(true);
+  }
+  const ids = new Set([id]);
+  ttChildren(id).forEach(c => ids.add(c.id));
+  stats.timerTasks = stats.timerTasks.filter(x => !ids.has(x.id));
+  saveData();
+  renderTimerTasks();
+}
+
+// ── 计时引擎（独立于番茄钟，同时只允许一个）──
+function ttStart(id) {
+  const t = stats.timerTasks.find(x => x.id === id);
+  if (!t) return;
+  const sec = ttSeconds(t);
+  if (sec <= 0) { showToast('⚠️ 请先设置时长'); return; }
+  if (ttActive) { showToast('⚠️ 已有计时在运行'); return; }
+  ttActive = {
+    id, total: sec, remaining: sec,
+    endTime: Date.now() + sec * 1000,
+    paused: false,
+    interval: setInterval(ttTick, 200),
+  };
+  playClick();
+  renderTimerTasks();
+}
+
+function ttTick() {
+  if (!ttActive || ttActive.paused) return;
+  const r = Math.max(0, Math.round((ttActive.endTime - Date.now()) / 1000));
+  if (r !== ttActive.remaining) {
+    ttActive.remaining = r;
+    // 只更新运行行，避免打断编辑/输入
+    const el = ttList.querySelector('[data-tt-time]');
+    if (el) el.textContent = formatTime(r);
+    const prog = ttList.querySelector('.tt-progress');
+    if (prog) prog.style.width = ((1 - r / ttActive.total) * 100) + '%';
+    document.title = `⏱ ${formatTime(r)} - 计时`;
+  }
+  if (r <= 0) ttComplete();
+}
+
+function ttPauseResume() {
+  if (!ttActive) return;
+  if (ttActive.paused) {
+    ttActive.paused = false;
+    ttActive.endTime = Date.now() + ttActive.remaining * 1000;
+  } else {
+    ttActive.paused = true;
+  }
+  playClick();
+  renderTimerTasks();
+}
+
+function ttStop(silent) {
+  if (!ttActive) return;
+  clearInterval(ttActive.interval);
+  ttActive = null;
+  if (!silent) playClick();
+  if (state.status !== 'running') document.title = '🍅 番茄钟';
+  renderTimerTasks();
+}
+
+function ttComplete() {
+  const id = ttActive.id;
+  clearInterval(ttActive.interval);
+  ttActive = null;
+  playAlert();
+  const t = stats.timerTasks.find(x => x.id === id);
+  if (t) {
+    t.done = true; // 计时完成自动打勾
+    ttSyncParent();
+    saveData();
+    sendNotification('⏱ 计时', `「${t.text}」时间到！`);
+    showToast(`⏰ 「${t.text}」时间到！`);
+  }
+  document.title = '⏰ 时间到！- 计时';
+  renderTimerTasks();
+}
+
+// ── 视图切换 ──
+function openTimerView() {
+  timerViewOpen = true;
+  app.classList.add('timer-view');
+  updateModeTabs();
+  renderTimerTasks();
+}
+
+function closeTimerView() {
+  if (!timerViewOpen) return;
+  timerViewOpen = false;
+  app.classList.remove('timer-view');
+  ttEditingId = null;
+  ttHideSubRow();
+  updateModeTabs();
+  refreshAllUI();
+}
+
+// ── 事件绑定 ──
+ttAddBtn.addEventListener('click', ttAdd);
+ttAddName.addEventListener('keydown', (e) => { if (e.code === 'Enter') ttAdd(); });
+ttAddMin.addEventListener('keydown', (e) => { if (e.code === 'Enter') ttAdd(); });
+ttSubBtn.addEventListener('click', ttSubAdd);
+ttSubCancel.addEventListener('click', ttHideSubRow);
+ttSubName.addEventListener('keydown', (e) => {
+  if (e.code === 'Enter') ttSubAdd();
+  if (e.code === 'Escape') ttHideSubRow();
+});
+ttSubMin.addEventListener('keydown', (e) => {
+  if (e.code === 'Enter') ttSubAdd();
+  if (e.code === 'Escape') ttHideSubRow();
+});
+
+ttList.addEventListener('click', (e) => {
+  const li = e.target.closest('.tt-item');
+  if (!li) return;
+  const id = li.dataset.id;
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  if (action === 'toggle') ttToggle(id);
+  else if (action === 'play') ttStart(id);
+  else if (action === 'pauseresume') ttPauseResume();
+  else if (action === 'stop') ttStop();
+  else if (action === 'subadd') ttShowSubRow(id);
+  else if (action === 'edit') {
+    ttEditingId = id;
+    renderTimerTasks();
+    const inp = ttList.querySelector('.tt-edit-name');
+    if (inp) { inp.focus(); inp.select(); }
+  }
+  else if (action === 'saveedit') ttSaveEdit(id);
+  else if (action === 'canceledit') { ttEditingId = null; renderTimerTasks(); }
+  else if (action === 'delete') ttDelete(id);
+});
+
+// 编辑框键盘操作
+ttList.addEventListener('keydown', (e) => {
+  if (!e.target.classList.contains('tt-edit-name') && !e.target.classList.contains('tt-edit-min')) return;
+  const li = e.target.closest('.tt-item');
+  if (!li) return;
+  if (e.code === 'Enter') ttSaveEdit(li.dataset.id);
+  if (e.code === 'Escape') { ttEditingId = null; renderTimerTasks(); }
+});
+
+// 页面重新可见时校准计时（后台节流补偿）
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !ttActive || ttActive.paused) return;
+  const r = Math.max(0, Math.round((ttActive.endTime - Date.now()) / 1000));
+  ttActive.remaining = r;
+  if (r <= 0) ttComplete();
+  else if (timerViewOpen) renderTimerTasks();
+});
+
 
 // ═══════════════════════════════════════════
 // 右侧抽屉 - 实时时钟 + 备忘录（可调宽度+富文本）
@@ -4102,6 +4625,7 @@ try {
 // 初始化每日清单
 cleanupOldTodos();
 renderTodo();
+renderTimerTasks();
 
 refreshAllUI();
 document.title = '🍅 番茄钟';
