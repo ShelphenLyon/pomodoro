@@ -3518,7 +3518,7 @@ function ttItemHtml(t, isSub) {
     btns += `<button class="tt-btn always tt-play" data-action="pauseresume" title="${ttActive.paused ? '继续' : '暂停'}">${ttActive.paused ? '▶' : '⏸'}</button>`;
     btns += `<button class="tt-btn always" data-action="stop" title="停止并累积">⏹</button>`;
   } else {
-    btns += `<button class="tt-btn always tt-play" data-action="play" title="开始计时">▶</button>`;
+    if (ttRunnable(t)) btns += `<button class="tt-btn always tt-play" data-action="play" title="开始计时">▶</button>`;
     if (!isSub) btns += `<button class="tt-btn" data-action="subadd" title="添加小任务">＋</button>`;
     btns += `<button class="tt-btn" data-action="edit" title="重命名">✎</button>`;
   }
