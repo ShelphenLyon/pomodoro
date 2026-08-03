@@ -1606,14 +1606,12 @@
   <div class="tt-panel" id="ttPanel">
     <div class="tt-add-row">
       <input class="tt-input" id="ttAddName" placeholder="添加计时任务..." maxlength="30">
-      <input class="tt-input tt-min" id="ttAddMin" type="number" min="1" max="999" placeholder="分钟">
       <button class="tt-add-btn" id="ttAddBtn" title="添加大任务">+</button>
     </div>
     <div class="tt-sub-row" id="ttSubRow" style="display:none">
       <span class="tt-parent-hint" id="ttParentHint"></span>
       <div class="tt-add-row" style="margin-bottom:0">
         <input class="tt-input" id="ttSubName" placeholder="小任务名..." maxlength="30">
-        <input class="tt-input tt-min" id="ttSubMin" type="number" min="1" max="999" placeholder="分钟">
         <button class="tt-add-btn" id="ttSubBtn" title="添加小任务">+</button>
         <button class="tt-add-btn" id="ttSubCancel" title="取消" style="background:var(--btn-bg);color:var(--text-secondary)">×</button>
       </div>
@@ -3391,11 +3389,9 @@ drawerTodoList.addEventListener('click', (e) => {
 const ttPanel      = $('#ttPanel');
 const ttList       = $('#ttList');
 const ttAddName    = $('#ttAddName');
-const ttAddMin     = $('#ttAddMin');
 const ttAddBtn     = $('#ttAddBtn');
 const ttSubRow     = $('#ttSubRow');
 const ttSubName    = $('#ttSubName');
-const ttSubMin     = $('#ttSubMin');
 const ttSubBtn     = $('#ttSubBtn');
 const ttSubCancel  = $('#ttSubCancel');
 const ttParentHint = $('#ttParentHint');
@@ -3403,7 +3399,8 @@ const ttParentHint = $('#ttParentHint');
 let timerViewOpen = false;   // 是否处于计时视图
 let ttSubParentId = null;    // 正在为其添加小任务的大任务 ID
 let ttEditingId   = null;    // 正在编辑的任务 ID
-let ttActive      = null;    // 运行中的计时 { id, total, remaining, endTime, paused, interval }
+let ttActive      = null;    // 运行中的计时 { id, base, startTime, paused, interval }
+// base = 任务已累积秒数（暂停时合并入 base）；运行时显示 = base + (now-startTime)/1000
 
 function ttChildren(pid) { return stats.timerTasks.filter(t => t.parentId === pid); }
 
@@ -3455,41 +3452,53 @@ function ttItemHtml(t, isSub) {
   const isRunning = ttActive && ttActive.id === t.id;
   const sec = ttSeconds(t);
 
-  // 编辑态
+  // 编辑态：只编辑名称（时长来自累积，不可手动改）
   if (ttEditingId === t.id) {
-    const derived = !t.parentId && ttChildren(t.id).length > 0; // 时长由小任务求和，不可编辑
     return `
     <li class="tt-item${isSub ? ' sub' : ''}" data-id="${t.id}">
       <input class="tt-input tt-edit-name" value="${escapeHtml(t.text).replace(/"/g, '&quot;')}" maxlength="30">
-      ${derived ? '' : `<input class="tt-input tt-min tt-edit-min" type="number" min="1" max="999" value="${Math.round((t.seconds || 0) / 60)}" placeholder="分钟">`}
       <button class="tt-btn always" data-action="saveedit" title="保存" style="color:var(--accent-short)">✓</button>
       <button class="tt-btn always" data-action="canceledit" title="取消">×</button>
     </li>`;
   }
 
-  let timeHtml, progressHtml = '';
+  let timeHtml;
   if (isRunning) {
-    timeHtml = `<span class="tt-time running" data-tt-time>${formatTime(ttActive.remaining)}</span>`;
-    const pct = ttActive.total > 0 ? (1 - ttActive.remaining / ttActive.total) * 100 : 0;
-    progressHtml = `<div class="tt-progress" style="width:${pct}%"></div>`;
+    const disp = ttActive.base + (ttActive.paused ? 0 : Math.round((Date.now() - ttActive.startTime) / 1000));
+    timeHtml = `<span class="tt-time running" data-tt-time="${t.id}">${formatTime(disp)}</span>`;
   } else {
-    timeHtml = `<span class="tt-time">${sec > 0 ? formatDurationShort(sec) : '—'}</span>`;
+    // 检查是否是大任务，且其某个小任务正在运行 → 实时显示合计
+    let displaySec = sec;
+    let isParentOfRunning = false;
+    if (!t.parentId && ttActive) {
+      const activeTask = stats.timerTasks.find(x => x.id === ttActive.id);
+      if (activeTask && activeTask.parentId === t.id) {
+        isParentOfRunning = true;
+        const childCurrent = ttActive.base + (ttActive.paused ? 0 : Math.round((Date.now() - ttActive.startTime) / 1000));
+        const otherSec = ttChildren(t.id).filter(c => c.id !== ttActive.id).reduce((s, c) => s + (c.seconds || 0), 0);
+        displaySec = childCurrent + otherSec;
+      }
+    }
+    if (isParentOfRunning) {
+      timeHtml = `<span class="tt-time running" data-tt-time="p_${t.id}">${formatTime(displaySec)}</span>`;
+    } else {
+      timeHtml = `<span class="tt-time">${sec > 0 ? formatTime(sec) : '—'}</span>`;
+    }
   }
 
   let btns = '';
   if (isRunning) {
     btns += `<button class="tt-btn always tt-play" data-action="pauseresume" title="${ttActive.paused ? '继续' : '暂停'}">${ttActive.paused ? '▶' : '⏸'}</button>`;
-    btns += `<button class="tt-btn always" data-action="stop" title="停止">⏹</button>`;
+    btns += `<button class="tt-btn always" data-action="stop" title="停止并累积">⏹</button>`;
   } else {
-    if (ttRunnable(t)) btns += `<button class="tt-btn always tt-play" data-action="play" title="开始">▶</button>`;
+    btns += `<button class="tt-btn always tt-play" data-action="play" title="开始计时">▶</button>`;
     if (!isSub) btns += `<button class="tt-btn" data-action="subadd" title="添加小任务">＋</button>`;
-    btns += `<button class="tt-btn" data-action="edit" title="编辑">✎</button>`;
+    btns += `<button class="tt-btn" data-action="edit" title="重命名">✎</button>`;
   }
   btns += `<button class="tt-btn tt-del" data-action="delete" title="删除">×</button>`;
 
   return `
     <li class="tt-item${isSub ? ' sub' : ''}${isRunning ? ' running' : ''}" data-id="${t.id}">
-      ${progressHtml}
       <div class="tt-check${t.done ? ' done' : ''}" data-action="toggle">${t.done ? '✓' : ''}</div>
       <div class="tt-name${t.done ? ' done' : ''}">${escapeHtml(t.text)}</div>
       ${timeHtml}
@@ -3501,9 +3510,8 @@ function ttItemHtml(t, isSub) {
 function ttAdd() {
   const text = ttAddName.value.trim();
   if (!text) return;
-  const min = parseInt(ttAddMin.value) || 0;
-  stats.timerTasks.push({ id: generateId(), text, seconds: Math.max(0, min) * 60, done: false, parentId: null });
-  ttAddName.value = ''; ttAddMin.value = '';
+  stats.timerTasks.push({ id: generateId(), text, seconds: 0, done: false, parentId: null });
+  ttAddName.value = '';
   saveData();
   renderTimerTasks();
   ttAddName.focus();
@@ -3511,12 +3519,10 @@ function ttAdd() {
 
 function ttSubAdd() {
   const text = ttSubName.value.trim();
-  if (!text || !ttSubParentId) return;
-  const min = parseInt(ttSubMin.value) || 0;
-  if (min <= 0) { showToast('⚠️ 请填写分钟数'); return; }
-  stats.timerTasks.push({ id: generateId(), text, seconds: min * 60, done: false, parentId: ttSubParentId });
-  ttSubName.value = ''; ttSubMin.value = '';
-  ttSyncParent(); // 新小任务未完成 → 大任务取消勾选
+  if (!text) return;
+  stats.timerTasks.push({ id: generateId(), text, seconds: 0, done: false, parentId: ttSubParentId });
+  ttSubName.value = '';
+  ttSyncParent();
   saveData();
   renderTimerTasks();
   ttSubName.focus();
@@ -3553,13 +3559,8 @@ function ttSaveEdit(id) {
   const t = stats.timerTasks.find(x => x.id === id);
   if (!li || !t) { ttEditingId = null; return; }
   const nameEl = li.querySelector('.tt-edit-name');
-  const minEl = li.querySelector('.tt-edit-min');
   const name = nameEl.value.trim();
   if (name) t.text = name;
-  if (minEl) {
-    const min = parseInt(minEl.value) || 0;
-    t.seconds = Math.max(0, min) * 60;
-  }
   ttEditingId = null;
   saveData();
   renderTimerTasks();
@@ -3585,16 +3586,15 @@ function ttDelete(id) {
   renderTimerTasks();
 }
 
-// ── 计时引擎（独立于番茄钟，同时只允许一个）──
+// ── 计时引擎（正计时，独立于番茄钟，同时只允许一个）──
 function ttStart(id) {
   const t = stats.timerTasks.find(x => x.id === id);
   if (!t) return;
-  const sec = ttSeconds(t);
-  if (sec <= 0) { showToast('⚠️ 请先设置时长'); return; }
   if (ttActive) { showToast('⚠️ 已有计时在运行'); return; }
   ttActive = {
-    id, total: sec, remaining: sec,
-    endTime: Date.now() + sec * 1000,
+    id,
+    base: ttSeconds(t),   // 任务已累积秒数
+    startTime: Date.now(),
     paused: false,
     interval: setInterval(ttTick, 200),
   };
@@ -3604,25 +3604,28 @@ function ttStart(id) {
 
 function ttTick() {
   if (!ttActive || ttActive.paused) return;
-  const r = Math.max(0, Math.round((ttActive.endTime - Date.now()) / 1000));
-  if (r !== ttActive.remaining) {
-    ttActive.remaining = r;
-    // 只更新运行行，避免打断编辑/输入
-    const el = ttList.querySelector('[data-tt-time]');
-    if (el) el.textContent = formatTime(r);
-    const prog = ttList.querySelector('.tt-progress');
-    if (prog) prog.style.width = ((1 - r / ttActive.total) * 100) + '%';
-    document.title = `⏱ ${formatTime(r)} - 计时`;
-  }
-  if (r <= 0) ttComplete();
+  const elapsed = ttActive.base + Math.round((Date.now() - ttActive.startTime) / 1000);
+  // 更新所有带 data-tt-time 的显示：运行中的小任务 + 其大任务
+  ttList.querySelectorAll('[data-tt-time]').forEach(el => {
+    const key = el.dataset.ttTime;
+    if (key === ttActive.id) {
+      el.textContent = formatTime(elapsed);
+    } else if (key && key.startsWith('p_')) {
+      const parentId = key.slice(2);
+      const otherSec = ttChildren(parentId).filter(c => c.id !== ttActive.id).reduce((s, c) => s + (c.seconds || 0), 0);
+      el.textContent = formatTime(elapsed + otherSec);
+    }
+  });
+  document.title = `⏱ ${formatTime(elapsed)} - 计时`;
 }
 
 function ttPauseResume() {
   if (!ttActive) return;
   if (ttActive.paused) {
     ttActive.paused = false;
-    ttActive.endTime = Date.now() + ttActive.remaining * 1000;
+    ttActive.startTime = Date.now();
   } else {
+    ttActive.base += Math.round((Date.now() - ttActive.startTime) / 1000);
     ttActive.paused = true;
   }
   playClick();
@@ -3631,27 +3634,17 @@ function ttPauseResume() {
 
 function ttStop(silent) {
   if (!ttActive) return;
-  clearInterval(ttActive.interval);
-  ttActive = null;
-  if (!silent) playClick();
-  if (state.status !== 'running') document.title = '🍅 番茄钟';
-  renderTimerTasks();
-}
-
-function ttComplete() {
-  const id = ttActive.id;
-  clearInterval(ttActive.interval);
-  ttActive = null;
-  playAlert();
-  const t = stats.timerTasks.find(x => x.id === id);
+  // 将当前会话的时长累积到任务
+  const elapsed = ttActive.base + (ttActive.paused ? 0 : Math.round((Date.now() - ttActive.startTime) / 1000));
+  const t = stats.timerTasks.find(x => x.id === ttActive.id);
   if (t) {
-    t.done = true; // 计时完成自动打勾
-    ttSyncParent();
+    t.seconds = elapsed;
     saveData();
-    sendNotification('⏱ 计时', `「${t.text}」时间到！`);
-    showToast(`⏰ 「${t.text}」时间到！`);
   }
-  document.title = '⏰ 时间到！- 计时';
+  clearInterval(ttActive.interval);
+  ttActive = null;
+  if (!silent) { playClick(); showToast(`⏱ 已累积 ${formatDuration(elapsed)}`); }
+  if (state.status !== 'running') document.title = '🍅 番茄钟';
   renderTimerTasks();
 }
 
@@ -3676,14 +3669,9 @@ function closeTimerView() {
 // ── 事件绑定 ──
 ttAddBtn.addEventListener('click', ttAdd);
 ttAddName.addEventListener('keydown', (e) => { if (e.code === 'Enter') ttAdd(); });
-ttAddMin.addEventListener('keydown', (e) => { if (e.code === 'Enter') ttAdd(); });
 ttSubBtn.addEventListener('click', ttSubAdd);
 ttSubCancel.addEventListener('click', ttHideSubRow);
 ttSubName.addEventListener('keydown', (e) => {
-  if (e.code === 'Enter') ttSubAdd();
-  if (e.code === 'Escape') ttHideSubRow();
-});
-ttSubMin.addEventListener('keydown', (e) => {
   if (e.code === 'Enter') ttSubAdd();
   if (e.code === 'Escape') ttHideSubRow();
 });
@@ -3713,20 +3701,18 @@ ttList.addEventListener('click', (e) => {
 
 // 编辑框键盘操作
 ttList.addEventListener('keydown', (e) => {
-  if (!e.target.classList.contains('tt-edit-name') && !e.target.classList.contains('tt-edit-min')) return;
+  if (!e.target.classList.contains('tt-edit-name')) return;
   const li = e.target.closest('.tt-item');
   if (!li) return;
   if (e.code === 'Enter') ttSaveEdit(li.dataset.id);
   if (e.code === 'Escape') { ttEditingId = null; renderTimerTasks(); }
 });
 
-// 页面重新可见时校准计时（后台节流补偿）
+// 页面重新可见时校准正计时显示（后台节流补偿）
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || !ttActive || ttActive.paused) return;
-  const r = Math.max(0, Math.round((ttActive.endTime - Date.now()) / 1000));
-  ttActive.remaining = r;
-  if (r <= 0) ttComplete();
-  else if (timerViewOpen) renderTimerTasks();
+  // 后台期间计时仍在推进，前端恢复后刷新显示即可（ttTick 会立即更新）
+  if (timerViewOpen) renderTimerTasks();
 });
 
 
