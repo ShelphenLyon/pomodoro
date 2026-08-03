@@ -2422,6 +2422,9 @@ function tick() {
     if (newElapsed !== state.remaining) {
       state.remaining = newElapsed;
       updateTimerDisplay();
+      // 秒数变化触发波纹脉冲
+      const r = $('.ripple');
+      r.style.animation = 'none'; void r.offsetHeight; r.style.animation = '';
       document.title = `🔼 ${formatTime(state.remaining)} - 正向计时`;
     }
     return;
@@ -2433,6 +2436,9 @@ function tick() {
   if (newRemaining !== state.remaining) {
     state.remaining = newRemaining;
     updateTimerDisplay();
+    // 秒数变化触发波纹脉冲
+    const r = $('.ripple');
+    r.style.animation = 'none'; void r.offsetHeight; r.style.animation = '';
     document.title = `${formatTime(state.remaining)} - ${MODES[state.mode].icon} 番茄钟`;
   }
 
@@ -3420,6 +3426,7 @@ let timerViewOpen = false;   // 是否处于计时视图
 let ttSubParentId = null;    // 正在为其添加小任务的大任务 ID
 let ttEditingId   = null;    // 正在编辑的任务 ID
 let ttActive      = null;    // 运行中的计时 { id, base, startTime, paused, interval }
+let ttLastDispSec  = 0;      // 上次显示的秒数，用于同步波纹脉冲
 // base = 任务已累积秒数（暂停时合并入 base）；运行时显示 = base + (now-startTime)/1000
 
 function ttChildren(pid) { return stats.timerTasks.filter(t => t.parentId === pid); }
@@ -3618,6 +3625,7 @@ function ttStart(id) {
     paused: false,
     interval: setInterval(ttTick, 200),
   };
+  ttLastDispSec = ttActive.base; // 波纹与秒同步的基准
   // 显示圆环动画
   if (timerViewOpen) {
     app.classList.add('tt-running');
@@ -3651,6 +3659,14 @@ function ttTick() {
   // 同步更新圆环显示
   if (timerViewOpen && app.classList.contains('tt-running')) {
     timerTime.textContent = formatTime(elapsed);
+    // 秒数变化时触发一次波纹脉冲（与秒同步）
+    if (elapsed !== ttLastDispSec) {
+      ttLastDispSec = elapsed;
+      const ripple = $('.ripple');
+      ripple.style.animation = 'none';
+      void ripple.offsetHeight; // 强制回流，重启动画
+      ripple.style.animation = '';
+    }
   }
   document.title = `⏱ ${formatTime(elapsed)} - 计时`;
 }
