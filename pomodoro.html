@@ -1537,15 +1537,13 @@
     letter-spacing: 0.5px;
   }
 
-  /* 计时运行时：圆环显示、任务列表隐藏 */
+  /* 计时运行时：圆环显示、任务列表隐藏、主按钮显示 */
   .app.timer-view.tt-running .timer-ring-container { display: block; }
   .app.timer-view.tt-running .tt-panel { display: none; }
-  .app.timer-view.tt-running .tt-ring-ctrl { display: flex; }
-  .tt-ring-ctrl {
-    display: none;
-    align-items: center; justify-content: center;
-    gap: 16px; margin-bottom: 28px;
-  }
+  .app.timer-view.tt-running .controls { display: flex; }
+  .app.timer-view.tt-running .btn-secondary { display: none; }
+  /* 计时运行时的旧 ring-ctrl 不再使用 */
+  .tt-ring-ctrl { display: none; }
 </style>
 </head>
 <body>
@@ -2138,7 +2136,8 @@ function updateDots() {
 }
 
 function updateBtnMain() {
-  btnMain.classList.remove('work', 'short', 'long', 'countup', 'countup-stop');
+  if (timerViewOpen && app.classList.contains('tt-running')) return;
+  btnMain.classList.remove('work', 'short', 'long', 'countup', 'countup-stop', 'timer');
   btnMain.classList.add('work');
   if (state.status === 'running') { btnIcon.textContent = '⏸'; }
   else { btnIcon.textContent = '▶'; }
@@ -2686,6 +2685,19 @@ function _stopSave() {
   _ring.setAttribute('stroke-dashoffset', '194.8');
 }
 btnMain.addEventListener('mousedown', () => {
+  // 计时运行中：长按停止
+  if (timerViewOpen && app.classList.contains('tt-running')) {
+    _longFired = false;
+    _pressTime = Date.now();
+    _ring.setAttribute('stroke', 'var(--accent-up)');
+    _ring.style.transition = 'stroke-dashoffset 1s linear';
+    _ring.setAttribute('stroke-dashoffset', '0');
+    _pressTimer = setTimeout(() => {
+      if (Date.now() - _pressTime < 900) return;
+      ttStop(); _longFired = true; _pressTimer = null;
+    }, 1000);
+    return;
+  }
   clearTimeout(_pressTimer); _pressTimer = null;
   _wasIdle = state.status === 'idle';
   if (_wasIdle) { toggleTimer(); return; }
@@ -2695,7 +2707,6 @@ btnMain.addEventListener('mousedown', () => {
   _ring.style.transition = 'stroke-dashoffset 1s linear';
   _ring.setAttribute('stroke-dashoffset', '0');
   _pressTimer = setTimeout(() => {
-    // 只有距离最近一次 mousedown 超过 900ms 才算真正长按（防御孤儿定时器）
     if (Date.now() - _pressTime < 900) return;
     _stopSave(); _longFired = true; _pressTimer = null;
   }, 1000);
@@ -2705,6 +2716,8 @@ btnMain.addEventListener('mouseup', () => {
   if (_pressTimer) { clearTimeout(_pressTimer); _pressTimer = null; }
   _ring.style.transition = 'stroke-dashoffset 0.3s ease-out';
   _ring.setAttribute('stroke-dashoffset', '194.8');
+  // 计时模式：短按暂停/继续
+  if (timerViewOpen && app.classList.contains('tt-running')) { ttPauseResume(); return; }
   if (!_wasIdle) toggleTimer();
 });
 btnMain.addEventListener('mouseleave', () => {
@@ -2730,6 +2743,8 @@ modeTabs.addEventListener('click', (e) => {
   const tab = e.target.closest('.mode-tab');
   if (!tab) return;
   if (tab.dataset.mode === 'timer') { openTimerView(); return; }
+  // 计时运行中禁止切换到其他功能区
+  if (ttActive) { showToast('⚠️ 计时运行中，请先停止'); return; }
   closeTimerView();
   switchMode(tab.dataset.mode);
 });
@@ -3418,9 +3433,6 @@ const ttSubName     = $('#ttSubName');
 const ttSubBtn      = $('#ttSubBtn');
 const ttSubCancel   = $('#ttSubCancel');
 const ttParentHint  = $('#ttParentHint');
-const ttRingCtrl    = $('#ttRingCtrl');
-const ttRingPause   = $('#ttRingPause');
-const ttRingStopBtn = $('#ttRingStopBtn');
 
 let timerViewOpen = false;   // 是否处于计时视图
 let ttSubParentId = null;    // 正在为其添加小任务的大任务 ID
@@ -3613,6 +3625,15 @@ function ttDelete(id) {
   renderTimerTasks();
 }
 
+// ── 计时按钮样式 ──
+function _updateTimerBtn(paused) {
+  btnMain.classList.remove('work', 'short', 'long', 'countup', 'countup-stop');
+  btnMain.classList.add('timer');
+  btnMain.style.background = 'var(--accent-up)';
+  btnMain.style.boxShadow = '0 4px 20px rgba(243,156,18,0.4)';
+  btnIcon.textContent = paused ? '▶' : '⏸';
+}
+
 // ── 计时引擎（正计时，独立于番茄钟，同时只允许一个）──
 function ttStart(id) {
   const t = stats.timerTasks.find(x => x.id === id);
@@ -3636,7 +3657,7 @@ function ttStart(id) {
     timerTime.textContent = formatTime(ttActive.base);
     timerLabel.textContent = t.text;
     timerLabel.style.color = 'var(--accent-up)';
-    ttRingPause.textContent = '⏸';
+    _updateTimerBtn(false);
   }
   playClick();
   renderTimerTasks();
@@ -3676,18 +3697,16 @@ function ttPauseResume() {
   if (ttActive.paused) {
     ttActive.paused = false;
     ttActive.startTime = Date.now();
-    // 恢复波纹
     if (timerViewOpen) {
       $('.timer-ring-container').classList.add('running');
-      ttRingPause.textContent = '⏸';
+      _updateTimerBtn(false);
     }
   } else {
     ttActive.base += Math.round((Date.now() - ttActive.startTime) / 1000);
     ttActive.paused = true;
-    // 停止波纹
     if (timerViewOpen) {
       $('.timer-ring-container').classList.remove('running');
-      ttRingPause.textContent = '▶';
+      _updateTimerBtn(true);
     }
   }
   playClick();
@@ -3700,10 +3719,10 @@ function ttStop(silent) {
   const elapsed = ttActive.base + (ttActive.paused ? 0 : Math.round((Date.now() - ttActive.startTime) / 1000));
   const t = stats.timerTasks.find(x => x.id === ttActive.id);
   const oldSec = t ? (t.seconds || 0) : 0;
+  const delta = elapsed - oldSec;
   if (t) {
     t.seconds = elapsed;
     // 将本次会话增量计入统计
-    const delta = elapsed - oldSec;
     if (delta >= 60) {
       stats.sessionHistory.push({
         date: localDate(new Date()),
@@ -3721,7 +3740,14 @@ function ttStop(silent) {
   _clearTimerRing();
   clearInterval(ttActive.interval);
   ttActive = null;
-  if (!silent) { playClick(); showToast(`⏱ 已累积 ${formatDuration(elapsed)}`); }
+  if (!silent) {
+    playClick();
+    if (delta >= 60) {
+      showToast(`✅ 已计入统计 ${formatDuration(delta)}`);
+    } else {
+      showToast('⚠️ 不足1分钟，未计入统计');
+    }
+  }
   if (state.status !== 'running') document.title = '🍅 番茄钟';
   renderTimerTasks();
 }
@@ -3729,12 +3755,18 @@ function ttStop(silent) {
 // 清理计时圆环，恢复番茄钟状态
 function _clearTimerRing() {
   app.classList.remove('tt-running');
-  const ring = $('.timer-ring-container');
-  ring.classList.remove('running');
-  // 恢复 ring 样式到番茄钟状态
-  ringProgress.style.stroke = MODES[state.mode].accent;
-  ringProgress.style.strokeDashoffset = ringProgress.style.strokeDashoffset; // keep
+  $('.timer-ring-container').classList.remove('running');
+  // 清空 ttStart 写入的 inline 样式，还给 CSS 控制
+  ringProgress.style.stroke = '';
+  ringProgress.style.strokeDashoffset = '';
+  ringProgress.style.strokeDasharray = '';
   timerLabel.style.color = '';
+  btnMain.style.background = '';
+  btnMain.style.boxShadow = '';
+  btnMain.classList.remove('timer');
+  // 重置主按钮内圈（长按停止后 mouseup 跳过了恢复）
+  _ring.setAttribute('stroke', 'var(--accent-work)');
+  _ring.setAttribute('stroke-dashoffset', '194.8');
   if (!timerViewOpen) refreshAllUI();
 }
 
@@ -3766,10 +3798,6 @@ ttSubName.addEventListener('keydown', (e) => {
   if (e.code === 'Enter') ttSubAdd();
   if (e.code === 'Escape') ttHideSubRow();
 });
-
-// 圆环控制按钮
-ttRingPause.addEventListener('click', ttPauseResume);
-ttRingStopBtn.addEventListener('click', () => ttStop());
 
 ttList.addEventListener('click', (e) => {
   const li = e.target.closest('.tt-item');
