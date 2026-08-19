@@ -211,7 +211,15 @@ h1 {
 </div>
 
 <script>
-const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'];
+function toRoman(n) {
+  if (n === 0) return '0';
+  if (n <= 20) return ROMAN[n];
+  const map = [['M',1000],['CM',900],['D',500],['CD',400],['C',100],['XC',90],['L',50],['XL',40],['X',10],['IX',9],['V',5],['IV',4],['I',1]];
+  let r = '';
+  for (const [s,v] of map) { while (n >= v) { r += s; n -= v; } }
+  return r;
+}
 const ALL_CARDS = [
   'The Fool','The Magician','The High Priestess','The Empress','The Emperor','The Hierophant','The Lovers','The Chariot',
   'Strength','The Hermit','Wheel of Fortune','Justice','The Hanged Man','Death','Temperance','The Devil',
@@ -267,7 +275,7 @@ function render() {
       lastSuit = suit;
       html += `<div class="suit-title">${suit}</div>`;
     }
-    const roman = cnt > 0 && cnt <= 10 ? ROMAN[cnt] : (cnt || '');
+    const roman = cnt > 0 ? toRoman(cnt) : '';
     const tier = getTier(i);
     html += `<div class="card${isMajor?' major':''} t${tier}${have?' owned':' locked'}" data-name="${name}" data-count="${cnt}" data-latest="${latest[id]||''}">
       ${have ? `<img src="${getCardImage(i)}" class="card-img" onerror="this.style.display='none'" alt="">` : '<div class="card-back">&#x2726;</div>'}
@@ -292,7 +300,7 @@ function render() {
       document.getElementById('modalName').textContent = name;
       document.getElementById('modalName').style.color = TEXT_COLORS[tier];
       document.getElementById('modalCount').style.color = TEXT_COLORS[tier];
-      const roman = cnt > 0 && cnt <= 10 ? ROMAN[cnt] : cnt;
+      const roman = cnt > 0 ? toRoman(cnt) : cnt;
       document.getElementById('modalCount').textContent = 'Owned: ' + roman;
       document.getElementById('modalTime').textContent = 'Last: ' + timeStr;
       const meaningEl = document.getElementById('modalMeaning');
@@ -335,7 +343,7 @@ document.getElementById('backBtn').addEventListener('click', () => {
 document.getElementById('logBtn').addEventListener('click', () => {
   const data = loadCards();
   const all = data.cards||[];
-  const items = [...all].reverse().slice(0, 200);
+  const items = [...all].reverse().slice(0, 5000);
   const fmt = ts => ts ? new Date(ts).toLocaleString() : '-';
   const html = items.length === 0 ? '<div style="color:var(--text-secondary);font-size:11px">No drops yet</div>' :
     items.map(c => {

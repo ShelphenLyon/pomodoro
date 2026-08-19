@@ -1782,12 +1782,6 @@ function loadData() {
 
 function saveData() {
   try {
-    // 清理 90 天前的记录
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 90);
-    const cutoffStr = localDate(cutoff);
-    stats.sessionHistory = stats.sessionHistory.filter(s => s.date >= cutoffStr);
-
     localStorage.setItem('pomodoro_data', JSON.stringify({ settings, stats }));
   } catch(e) { /* ignore */ }
 }
@@ -2217,7 +2211,7 @@ function tick() {
       // 补跑因后台节流错过的每秒掉卡检测，上限 1 小时防止异常
       const toCheck = missed > 3600 ? 3600 : missed;
       for (let s = 0; s < toCheck; s++) {
-        if (Math.random() * 100 < 0.25) {
+        if (Math.random() * 100 < 0.4) {
           tryCardDrop();
         }
       }
