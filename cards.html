@@ -100,6 +100,8 @@ h1 {
   font-family:inherit; font-size:10px; letter-spacing:3px; transition:all 0.4s; text-transform:uppercase;
 }
 .btn:hover { border-color:var(--gold); color:var(--gold); box-shadow:0 0 8px rgba(201,168,76,0.1); }
+.btn.paused { border-color:var(--accent); color:#e08aaa; }
+.btn.paused:hover { border-color:#e08aaa; color:#fff; box-shadow:0 0 8px rgba(224,138,170,0.2); }
 .cards-grid { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; max-width:960px; padding-bottom:60px; }
 .card {
   width:86px; height:130px; border-radius:4px; display:flex;
@@ -187,6 +189,7 @@ h1 {
 <div class="subtitle">TAROT COLLECTION</div>
 <div class="stats-bar">
   <span>Collected: <b id="collectedCount">0</b></span>
+  <button class="btn" id="pauseDropBtn">Pause Drops</button>
   <button class="btn" id="logBtn">Log</button>
   <button class="btn" id="resetCards">Reset</button>
 </div>
@@ -364,8 +367,33 @@ document.getElementById('resetCards').addEventListener('click', () => {
   if (confirm('Reset all collected cards?')) {
     localStorage.setItem('pomodoro_cards', JSON.stringify({ dropRate: 1 }));
     render();
+    updatePauseDropBtn();
   }
 });
+// 暂停 / 恢复卡牌掉落
+function updatePauseDropBtn() {
+  const data = loadCards();
+  const btn = document.getElementById('pauseDropBtn');
+  if (data.dropPaused) {
+    btn.textContent = 'Resume Drops';
+    btn.classList.add('paused');
+  } else {
+    btn.textContent = 'Pause Drops';
+    btn.classList.remove('paused');
+  }
+}
+document.getElementById('pauseDropBtn').addEventListener('click', () => {
+  const data = loadCards();
+  if (data.dropPaused) {
+    data.dropPaused = false;
+    data.dropResumedAt = Date.now();
+  } else {
+    data.dropPaused = true;
+  }
+  localStorage.setItem('pomodoro_cards', JSON.stringify(data));
+  updatePauseDropBtn();
+});
+updatePauseDropBtn();
 window.addEventListener('storage', (e) => {
   if (e.key === 'pomodoro_cards') render();
 });

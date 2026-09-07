@@ -2208,13 +2208,22 @@ function tick() {
   if (state.mode === 'work') {
     const missed = thisSec - state._lastDropSec;
     if (missed > 0) {
-      // 补跑因后台节流错过的每秒掉卡检测，上限 1 小时防止异常
-      const toCheck = missed > 3600 ? 3600 : missed;
-      for (let s = 0; s < toCheck; s++) {
-        if (Math.random() * 100 < 0.4) {
-          tryCardDrop();
+      const cardsData = JSON.parse(localStorage.getItem('pomodoro_cards')||'{}');
+      if (!cardsData.dropPaused) {
+        // 补跑因后台节流错过的每秒掉卡检测，上限 1 小时防止异常
+        let toCheck = missed > 3600 ? 3600 : missed;
+        // 刚从暂停恢复时，仅检查恢复时刻之后的秒数，避免补发暂停期间的卡
+        if (cardsData.dropResumedAt) {
+          const sinceResume = thisSec - Math.floor(cardsData.dropResumedAt / 1000);
+          if (sinceResume < toCheck) toCheck = Math.max(0, sinceResume);
+        }
+        for (let s = 0; s < toCheck; s++) {
+          if (Math.random() * 100 < 0.4) {
+            tryCardDrop();
+          }
         }
       }
+      // 暂停时也推进基线，恢复后不会补发暂停期间的掉落
       state._lastDropSec = thisSec;
     }
   }
