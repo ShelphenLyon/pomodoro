@@ -2102,6 +2102,8 @@ $('#importFile').addEventListener('change', function() {
 // ═══════════════════════════════════════════
 let timerInterval = null;
 let timerEndTime = null;    // Date.now() + remaining * 1000，精确计时
+let commitTimerInterval = null;  // 每 1 分钟自动存档定时器
+const COMMIT_INTERVAL_MS = 1 * 60 * 1000;
 
 function getDuration(mode) {
   switch (mode) {
@@ -2143,6 +2145,7 @@ function startTimer() {
       state._pausedElapsed = 0;
       state._segments = [];
       state._segStart = Date.now();
+      state._segRemaining = state.remaining;
       state._sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     } else {
       state.total = state.remaining;
@@ -2153,12 +2156,14 @@ function startTimer() {
       state._sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
     timerInterval = setInterval(tick, 200);
+    commitTimerInterval = setInterval(commitSnapshot, COMMIT_INTERVAL_MS);
     playClick();
   } else if (state.status === 'paused') {
     state.status = 'running';
     if (state.countUp) {
       state._elapsedStart = Date.now();
       state._segStart = Date.now();
+      state._segRemaining = state.remaining;
       timerEndTime = null;
     } else {
       timerEndTime = Date.now() + state.remaining * 1000;
@@ -2166,6 +2171,7 @@ function startTimer() {
       state._segRemaining = state.remaining;
     }
     timerInterval = setInterval(tick, 200);
+    commitTimerInterval = setInterval(commitSnapshot, COMMIT_INTERVAL_MS);
     playClick();
   }
   updateBtnMain();
@@ -2175,6 +2181,7 @@ function startTimer() {
 
 function pauseTimer() {
   clearHydration();
+  stopCommitTimer();
   state.status = 'paused';
   clearInterval(timerInterval);
   timerInterval = null;
@@ -2182,19 +2189,55 @@ function pauseTimer() {
     state._pausedElapsed = state.remaining;
     state._elapsedStart = null;
   }
-  // 记录本段（两种模式）
+  // 记录本段（两种模式） —— 统一用 _segRemaining 做段起点基线
   const segEnd = Date.now();
-  let segDur = 0;
-  if (state.countUp) {
-    segDur = state.remaining - state._segments.reduce((s, x) => s + x.duration, 0);
-  } else {
-    segDur = state._segRemaining - state.remaining;
-  }
+  const segDur = Math.abs(state._segRemaining - state.remaining);
   if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
+  // 暂停前立刻存档，防止暂停后关浏览器丢失
+  if (state.mode === 'work' && state._segments.length > 0) {
+    const task = taskInput.value.trim() || '未命名任务';
+    writeSegments(state._segments, state._sessionId, task);
+    saveData();
+    state._segments = [];
+  }
   timerEndTime = null;
   updateBtnMain();
   updateCountUpUI();
   updateBreathing();
+}
+
+// ═══════════════════════════════════════════
+// 每 5 分钟自动存档 —— 写 sessionHistory + 清空已存档的段
+// 崩溃时已存档的时长不丢；完成/暂停后剩余段照常处理
+// 不做恢复，下次打开是全新 session
+// ═══════════════════════════════════════════
+function stopCommitTimer() {
+  if (commitTimerInterval) { clearInterval(commitTimerInterval); commitTimerInterval = null; }
+}
+
+function commitSnapshot() {
+  // 只在专注运行时存档
+  if (state.mode !== 'work' || state.status !== 'running') return;
+
+  // 计算已暂停段 + 当前运行段快照
+  // 两种模式统一用 _segRemaining 做基线：
+  //   倒计时：_segRemaining 是段开始时的 remaining，当前段时长 = 段起remaining - 当前remaining
+  //   正向计时：_segRemaining 是段开始时已过秒数，当前段时长 = 当前remaining - 段起remaining
+  const segEnd = Date.now();
+  const curSegDur = Math.abs(state._segRemaining - state.remaining);
+  if (curSegDur <= 0 && state._segments.length === 0) return;  // 不到时间
+
+  const toWrite = [...state._segments];
+  if (curSegDur > 0) toWrite.push({ start: state._segStart, end: segEnd, duration: curSegDur });
+
+  const task = taskInput.value.trim() || '未命名任务';
+  writeSegments(toWrite, state._sessionId, task);
+  saveData();
+
+  // 清空已存档的段，重置当前段起点 —— 下次只存增量
+  state._segments = [];
+  state._segStart = Date.now();
+  state._segRemaining = state.remaining;
 }
 
 function toggleTimer() {
@@ -2255,6 +2298,7 @@ function tick() {
 
 function timerComplete() {
   clearHydration();
+  stopCommitTimer();
   clearInterval(timerInterval);
   timerInterval = null;
   timerEndTime = null;
@@ -2304,10 +2348,11 @@ function timerComplete() {
 
 function stopCountUp() {
   clearHydration();
+  stopCommitTimer();
   const elapsed = state.remaining;
-  // 记录最后一段
+  // 记录最后一段 —— 用 _segRemaining 做基线（commitSnapshot 清空后 _segments 为空，reduce=0 会写全量）
   const segEnd = Date.now();
-  const segDur = elapsed - state._segments.reduce((s, x) => s + x.duration, 0);
+  const segDur = Math.abs(state._segRemaining - state.remaining);
   if (segDur > 0) state._segments.push({ start: state._segStart, end: segEnd, duration: segDur });
   clearInterval(timerInterval);
   timerInterval = null; timerEndTime = null;
@@ -2363,6 +2408,7 @@ function skipTimer() {
     return;
   }
 
+  stopCommitTimer();
   const wasRunning = state.status === 'running';
   clearInterval(timerInterval);
   timerInterval = null;
@@ -2384,6 +2430,7 @@ function skipTimer() {
 }
 
 function resetTimer() {
+  stopCommitTimer();
   const wasRunning = state.status === 'running';
   clearInterval(timerInterval);
   timerInterval = null;
@@ -2436,6 +2483,7 @@ let _pressTimer = null, _longFired = false, _wasIdle = false, _pressTime = 0;
 const _ring = document.querySelector('.btn-ring circle');
 function _stopSave() {
   clearHydration();
+  stopCommitTimer();
   if (state.countUp) {
     stopCountUp();
     _ring.style.transition = 'none';
@@ -2454,7 +2502,7 @@ function _stopSave() {
   }
   // 倒计时专注模式：自定义确认弹窗
   const elapsed = state.total - state.remaining;
-  // 暂停计时
+  // 暂停计时（保留 checkpoint，用户可能取消恢复）
   clearInterval(timerInterval); timerInterval = null; timerEndTime = null;
   updateBtnMain();
   const overlay = document.getElementById('confirmOverlay');
@@ -2486,6 +2534,7 @@ function _stopSave() {
     state.status = 'running';
     timerEndTime = Date.now() + state.remaining * 1000;
     timerInterval = setInterval(tick, 200);
+    commitTimerInterval = setInterval(commitSnapshot, COMMIT_INTERVAL_MS);
     updateBtnMain();
   };
   _ring.style.transition = 'none';
@@ -3539,9 +3588,8 @@ function renderStats() {
     html += `<div class="session-list">`;
     const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     merged.forEach(m => {
-      const segCount = m.count > 1 ? ` (${m.count}段)` : '';
       html += `<div class="session-row">
-        <span class="session-task">${escapeHtml(m.task || '未命名')}${segCount}</span>
+        <span class="session-task">${escapeHtml(m.task || '未命名')}</span>
         <span class="session-time">${fmt(new Date(m.startTime))} - ${fmt(new Date(m.endTime))}</span>
         <span class="session-dur">${formatDuration(m.duration)}</span>
       </div>`;
